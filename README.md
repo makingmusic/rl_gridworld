@@ -68,6 +68,7 @@ I want to play with:
 - having the goal be another point than the extreme state on the right.
 - allow "jumps", which may be X number of steps that can be taken together. Would be fun to see how learning improves (or becomes worse) by higher values of X.
 - Add obstacles or forbidden states so the only way to reach the end would be jump over them.
+- Changing the tradeoffs between exploitation vs exploration. There are many algorithsm avaiable include the infamouse
 
 ## Requirements / Installation etc...
 
