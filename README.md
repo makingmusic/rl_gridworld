@@ -58,7 +58,7 @@ You can modify the following parameters in `main.py`:
 
 - Training beyond 100 states is just a pain and I only do it for fun
 - Adding a reward of -0.01 at every step was a MAJOR breakthrough (See "Determine reward" in gridworld1d.py). Think about why - this was super fun for me. Without this reward, I just couldn't train past 50 states in reasonable cpu time.
--
+- You will find a python notebook file (main.ipynb). It is a failed attempt to make this run in a notebook.
 
 ## Future
 
