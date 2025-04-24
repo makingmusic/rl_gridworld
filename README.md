@@ -69,6 +69,30 @@ I want to play with:
 - allow "jumps", which may be X number of steps that can be taken together. Would be fun to see how learning improves (or becomes worse) by higher values of X.
 - Add obstacles or forbidden states so the only way to reach the end would be jump over them.
 - Changing the tradeoffs between exploitation vs exploration. There are many algorithsm avaiable include the infamous softmax that are used in modern LLMs too. I want to get there.
+ 
+## GPT Says I should try the following:
+
+1. Implement Multiple RL Algorithms
+	•	Value Iteration & Policy Iteration: Understand the differences between model-based and model-free approaches.
+	•	Monte Carlo Methods: Explore how sampling can be used for policy evaluation and improvement.
+	•	Temporal Difference Learning: Implement SARSA and Q-learning to compare on-policy and off-policy methods.
+
+2. Introduce Function Approximation
+	•	Linear Function Approximation: Replace tabular methods with linear approximators to handle larger state spaces.
+	•	Neural Networks: Begin with simple feedforward networks before moving to more complex architectures.
+
+3. Experiment with Exploration Strategies
+	•	Epsilon-Greedy: Analyze how varying epsilon affects learning.
+	•	Softmax Action Selection: Implement and compare with epsilon-greedy.
+	•	Upper Confidence Bound (UCB): Explore how optimism in the face of uncertainty can drive exploration.
+
+4. Incorporate Stochasticity
+	•	Action Noise: Introduce randomness in action outcomes to simulate real-world unpredictability.
+	•	Reward Noise: Add variability to rewards to study robustness.
+
+5. Visualize Learning Progress
+	•	Heatmaps of State-Value Functions: Visualize how the agent’s understanding of the environment evolves.
+	•	Policy Arrows: Display the agent’s preferred action in each state.
 
 ## Requirements / Installation etc...
 
