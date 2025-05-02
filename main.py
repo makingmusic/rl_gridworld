@@ -27,30 +27,34 @@ def isTrainingCompleteByStepCount(stepCounterTable):
     return False
 #end def isTrainingCompleteByStepCount
 
-
-
 # Configuration Variables
 num_episodes = 1000 # number of training episodes
 grid1DSize = 100 # size of the 1D grid
 startState = 0 # starting state
 goalState = (grid1DSize - 1)   # goal state 
 sleep_time = 0 # time to sleep between episodes
+#exploration_strategy = "epsilon_greedy"  # Options: "epsilon_greedy" or "softmax"
+#temperature = 1.0  # Initial temperature for softmax exploration
+exploration_strategy = "softmax"  # Options: "epsilon_greedy" or "softmax"
+temperature = 1.0  # Initial temperature for softmax exploration
 
 # Init env. Init agent.
 step_count = 0
 env = GridWorld1D(size=grid1DSize, start_state=startState, goal_state=goalState)
 agent = QLearningAgent(actions=["left", "right"], learning_rate=0.1, discount_factor=0.99,
-                       epsilon=1.0, epsilon_decay=0.95, epsilon_min=0.01)
+                       epsilon=1.0, epsilon_decay=0.95, epsilon_min=0.01,
+                       exploration_strategy=exploration_strategy, temperature=temperature)
 
 # Initialize lists to store episode and step data
 episode_data = []
 step_data = []
 epsilon_data = []
+temperature_data = []  # Add list to store temperature values
 qtable_data = []  # Will store Q-tables for each episode
-
+current_steps = 0 # Initialize step counter variable
 # Initialize the display tables and progress bar
+
 table = plots.initDisplayTable()
-#stepCounterTable = plots.initStepCounterTable()
 progress = Progress(
     SpinnerColumn(),  # Shows a spinning animation
     TextColumn("Training progress:"),  # Task description
@@ -62,7 +66,6 @@ progress = Progress(
     transient=True
 )
 task = progress.add_task("Training Q-learning agent", total=num_episodes)
-
 # Add state progress bar
 stateProgressBar = Progress(
     SpinnerColumn(),
@@ -72,12 +75,7 @@ stateProgressBar = Progress(
     transient=True
 )
 stateTask = stateProgressBar.add_task("State tracking", total=grid1DSize-1)
-
-# Initialize step counter variable
-current_steps = 0
-
-# Create initial display group
-display_group = Group(progress, stateProgressBar, table)
+display_group = Group(progress, stateProgressBar, table) # Create initial display group
 
 with Live(display_group, refresh_per_second=50) as live:
     for i in range(grid1DSize):
@@ -109,6 +107,7 @@ with Live(display_group, refresh_per_second=50) as live:
         episode_data.append(episode)
         step_data.append(step_count)
         epsilon_data.append(agent.epsilon)
+        temperature_data.append(agent.temperature)  # Store temperature value
 
         # Get the Q-table for this episode and store it in qtable_data
         qtable = agent.getQTable()
@@ -126,9 +125,6 @@ with Live(display_group, refresh_per_second=50) as live:
         # Update Displays. (progress bar and the Q-table)
         progress.update(task, description=f"Episode {episode+1} of {num_episodes}", advance=1)
         table = plots.updateDisplayTableFromQTable(table, qtable)
-        #updateStepCounter(stepCounterTable, episode, step_count) # todo: add this back in
-        
-        # Update the display group with new plot
         display_group = Group(progress, stateProgressBar, table)
         live.update(display_group)
         time.sleep(sleep_time)
@@ -137,21 +133,17 @@ with Live(display_group, refresh_per_second=50) as live:
 
 #end with Live loop
 
-# Final update to show completion
+# Final display update to show completion
 progress.update(task, description=f"Training completed", completed=num_episodes)
 live.update(display_group)
 print(f"Training completed in {end_time - start_time:.2f} seconds")
 
 
-# plot all graphs
-# plot step_count and epsilon against episode number in a line graph
-#plt.figure(figsize=(plt.rcParams['figure.figsize'][0] * 0.8, plt.rcParams['figure.figsize'][1] * 0.8))
-
 # Plot steps per episode
 plots.plotStepsPerEpisode(plt, episode_data, step_data)
 
-# Plot epsilon decay
-#plots.plotEpsilonDecayPerEpisode(plt, episode_data, epsilon_data)
+# Plot temperature decay
+plots.plotTemperatureDecayPerEpisode(plt, episode_data, temperature_data)
 
 # Plot Q-values for last two states
 statesOfInterest = list(range(0, grid1DSize, 5)) + [grid1DSize-1]

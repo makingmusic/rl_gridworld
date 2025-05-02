@@ -232,3 +232,12 @@ def plotEpsilonDecayPerEpisode(pltPointer, episode_data, epsilon_data):
     pltPointer.grid(True)
 # end def plotEpsilonDecayPerEpisode
 
+def plotTemperatureDecayPerEpisode(pltPointer, episode_data, temperature_data):
+    pltPointer.figure(figsize=(pltPointer.rcParams['figure.figsize'][0] * 0.8, pltPointer.rcParams['figure.figsize'][1] * 0.8))
+    pltPointer.plot(episode_data, temperature_data, 'g-', label='Temperature')
+    pltPointer.xlabel('Episode')
+    pltPointer.ylabel('Temperature')
+    pltPointer.title('Temperature Decay per Episode')
+    pltPointer.grid(True)
+# end def plotTemperatureDecayPerEpisode
+

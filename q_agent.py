@@ -2,7 +2,7 @@ import numpy as np
 
 # Q-learning Agent
 class QLearningAgent:
-    def __init__(self, actions, learning_rate=0.1, discount_factor=0.99, epsilon=1.0, epsilon_decay=0.99, epsilon_min=0.1):
+    def __init__(self, actions, learning_rate=0.1, discount_factor=0.99, epsilon=1.0, epsilon_decay=0.99, epsilon_min=0.1, exploration_strategy="epsilon_greedy", temperature=1.0):
         """
         Initialize the Q-learning agent.
         :param actions: List of possible actions (e.g., ['left', 'right']).
@@ -11,6 +11,8 @@ class QLearningAgent:
         :param epsilon: Initial epsilon for epsilon-greedy exploration.
         :param epsilon_decay: Multiplicative factor to decay epsilon each episode.
         :param epsilon_min: Minimum epsilon value (floor) for exploration.
+        :param exploration_strategy: Either "epsilon_greedy" or "softmax".
+        :param temperature: Temperature parameter for softmax exploration.
         """
         self.actions = actions
         self.lr = learning_rate
@@ -18,26 +20,41 @@ class QLearningAgent:
         self.epsilon = epsilon
         self.epsilon_decay = epsilon_decay
         self.epsilon_min = epsilon_min
+        self.exploration_strategy = exploration_strategy
+        self.temperature = temperature
         # Initialize Q-table as an empty dict. Will add states as keys when encountered.
         self.q_table = {}  # format: {state: {action: value, ...}, ...}
     
+    def softmax(self, action_values):
+        """Compute softmax probabilities for action selection."""
+        # Subtract max value for numerical stability
+        exp_values = np.exp((action_values - np.max(action_values)) / self.temperature)
+        return exp_values / np.sum(exp_values)
+    
     def choose_action(self, state):
-        """Choose an action based on epsilon-greedy strategy."""
+        """Choose an action based on the selected exploration strategy."""
         # Ensure the state exists in Q-table
         if state not in self.q_table:
             # Initialize with 0.0 for all possible actions
             self.q_table[state] = {a: 0.0 for a in self.actions}
         
-        # Decide whether to explore or exploit
-        if np.random.rand() < self.epsilon:
-            # Exploration: choose a random action
-            return np.random.choice(self.actions)
-        else:
-            # Exploitation: choose the action with highest Q-value for this state
-            action_values = self.q_table[state]
-            # Argmax over actions (choose the action with max value; tie-breaker: first max found)
-            best_action = max(action_values, key=action_values.get)
-            return best_action
+        if self.exploration_strategy == "epsilon_greedy":
+            # Epsilon-greedy exploration
+            if np.random.rand() < self.epsilon:
+                # Exploration: choose a random action
+                return np.random.choice(self.actions)
+            else:
+                # Exploitation: choose the action with highest Q-value for this state
+                action_values = self.q_table[state]
+                best_action = max(action_values, key=action_values.get)
+                return best_action
+        else:  # softmax
+            # Get Q-values for all actions in current state
+            action_values = list(self.q_table[state].values())
+            # Compute softmax probabilities
+            probabilities = self.softmax(action_values)
+            # Choose action based on computed probabilities
+            return np.random.choice(self.actions, p=probabilities)
     
     def update_q_value(self, state, action, reward, next_state, done):
         """Update the Q-table entry for (state, action) using the Q-learning update rule."""
@@ -59,6 +76,9 @@ class QLearningAgent:
         """Decay the exploration rate after each episode (to gradually favor exploitation)."""
         # Multiply epsilon by decay factor but not go below the minimum threshold
         self.epsilon = max(self.epsilon_min, self.epsilon * self.epsilon_decay)
+        # For softmax, we can also decay the temperature
+        if self.exploration_strategy == "softmax":
+            self.temperature = max(0.1, self.temperature * 0.99)  # Decay temperature slowly
 
     def getQTable(self):
         """Get the Q-table."""
@@ -66,7 +86,6 @@ class QLearningAgent:
 
     def print_q_table(self):
         """Print the Q-table."""
-        #print("Learned Q-table:")
         for s, actions in self.q_table.items():
             qvalue = actions.values()
             qvaluelist = list(qvalue)
@@ -74,7 +93,5 @@ class QLearningAgent:
             qvaluelist_right = qvaluelist[1]
             qvaluelist_leftValue = round(float(qvaluelist_left), 4)
             qvaluelist_rightValue = round(float(qvaluelist_right), 4)
-            #qvaluelist_rightValue = qvaluelist_right[1]
             print("State: ", s, ": Left: ", qvaluelist_leftValue, "Right: ", qvaluelist_rightValue)
-            #print(f"State {s}: {qvaluelist_leftValue:.4f}, {qvaluelist_rightValue:.4f}")
             
