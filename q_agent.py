@@ -2,7 +2,7 @@ import numpy as np
 
 # Q-learning Agent
 class QLearningAgent:
-    def __init__(self, actions, learning_rate=0.1, discount_factor=0.99, epsilon=1.0, epsilon_decay=0.99, epsilon_min=0.1, exploration_strategy="epsilon_greedy", temperature=1.0):
+    def __init__(self, actions, learning_rate=0.1, discount_factor=0.99, epsilon=1.0, epsilon_decay=0.99, epsilon_min=0.1, exploration_strategy="epsilon_greedy", temperature=1.0, temperature_decay=0.99, temperature_min=0.1):
         """
         Initialize the Q-learning agent.
         :param actions: List of possible actions (e.g., ['left', 'right']).
@@ -13,6 +13,8 @@ class QLearningAgent:
         :param epsilon_min: Minimum epsilon value (floor) for exploration.
         :param exploration_strategy: Either "epsilon_greedy" or "softmax".
         :param temperature: Temperature parameter for softmax exploration.
+        :param temperature_decay: Multiplicative factor to decay temperature each episode. softmax only.
+        :param temperature_min: Minimum temperature value (floor) for softmax exploration.
         """
         self.actions = actions
         self.lr = learning_rate
@@ -22,6 +24,8 @@ class QLearningAgent:
         self.epsilon_min = epsilon_min
         self.exploration_strategy = exploration_strategy
         self.temperature = temperature
+        self.temperature_decay = temperature_decay
+        self.temperature_min = temperature_min
         # Initialize Q-table as an empty dict. Will add states as keys when encountered.
         self.q_table = {}  # format: {state: {action: value, ...}, ...}
     
@@ -78,7 +82,7 @@ class QLearningAgent:
         self.epsilon = max(self.epsilon_min, self.epsilon * self.epsilon_decay)
         # For softmax, we can also decay the temperature
         if self.exploration_strategy == "softmax":
-            self.temperature = max(0.1, self.temperature * 0.99)  # Decay temperature slowly
+            self.temperature = max(self.temperature_min, self.temperature * self.temperature_decay)  # Decay temperature using configurable parameters
 
     def getQTable(self):
         """Get the Q-table."""

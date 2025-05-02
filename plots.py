@@ -14,23 +14,43 @@ def initDisplayTable():
     return table
 #end def initDisplayTable
 
-def updateDisplayTableFromQTable(display_table, qtable):
-    for state, actions in qtable.items():
-        state_str = "State " + str(state)
-        left_str = "Left " + str(list(actions.values())[0])
-        right_str = "Right " + str(list(actions.values())[1])
-        
-        leftValue = float(list(actions.values())[0])
-        rightValue = float(list(actions.values())[1])
+def updateDisplayTableFromQTable(display_table, qtable, max_rows=20):
+    # Calculate the step size to show only max_rows rows
+    total_states = len(qtable)
+    if total_states <= max_rows:
+        step_size = 1
+    else:
+        step_size = total_states // max_rows
+        if step_size < 1:
+            step_size = 1
+
+    # Get the states we want to show
+    states_to_show = sorted(qtable.keys())[::step_size]
+    
+    # Update existing rows or add new ones if needed
+    for i, state in enumerate(states_to_show):
+        actions = qtable[state]
+        leftValue = float(actions['left'])
+        rightValue = float(actions['right'])
         decision = "stay" if leftValue == rightValue else ("<<Left<<" if leftValue > rightValue else ">>Right>>")
         stateValueStr = str(state)
         leftValueStr = str(round(leftValue, 4))
-        rightValueStr = str(round(rightValue, 4)) 
-        display_table.columns[0]._cells[state] = stateValueStr
-        display_table.columns[1]._cells[state] = leftValueStr
-        display_table.columns[2]._cells[state] = rightValueStr
-        display_table.columns[3]._cells[state] = decision
-    # end for state, actions loop
+        rightValueStr = str(round(rightValue, 4))
+        
+        if i < len(display_table.rows):
+            # Update existing row
+            display_table.columns[0]._cells[i] = stateValueStr
+            display_table.columns[1]._cells[i] = leftValueStr
+            display_table.columns[2]._cells[i] = rightValueStr
+            display_table.columns[3]._cells[i] = decision
+        else:
+            # Add new row if needed
+            display_table.add_row(stateValueStr, leftValueStr, rightValueStr, decision)
+    
+    # If we have more rows than needed, remove the extra ones
+    while len(display_table.rows) > len(states_to_show):
+        display_table.rows.pop()
+    
     return display_table
 #end def updateDisplayTableFromQTable
 

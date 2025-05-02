@@ -1,13 +1,13 @@
 import time
 import matplotlib.pyplot as plt
-from rich.live     import Live
-from rich.table    import Table
-from rich.progress import BarColumn, Progress, SpinnerColumn, TextColumn, MofNCompleteColumn, TimeElapsedColumn, TimeRemainingColumn, TaskProgressColumn
-from rich.console  import Group
-from rich.panel    import Panel
+from   rich.live     import Live
+from   rich.table    import Table
+from   rich.progress import BarColumn, Progress, SpinnerColumn, TextColumn, MofNCompleteColumn, TimeElapsedColumn, TimeRemainingColumn, TaskProgressColumn
+from   rich.console  import Group
+from   rich.panel    import Panel
 import plots
-from q_agent       import QLearningAgent
-from gridworld1d   import GridWorld1D
+from   q_agent       import QLearningAgent
+from   gridworld1d   import GridWorld1D
 
 def isTrainingComplete(qtable):
     for state, actions in qtable.items():
@@ -27,23 +27,56 @@ def isTrainingCompleteByStepCount(stepCounterTable):
     return False
 #end def isTrainingCompleteByStepCount
 
+# default values for learning parameters
+temperature = 1.0  # default Initial temperature for softmax exploration
+temperature_decay = 0.9  # default Multiplicative factor to decay temperature each episode
+temperature_min = 0.1  # default Minimum temperature value (floor) for softmax exploration
+learning_rate = 0.1  # learning rate for Q-value updates
+discount_factor = 0.99  # discount factor for future rewards
+epsilon = 1.0  # initial exploration rate
+epsilon_decay = 0.95  # decay rate for exploration
+epsilon_min = 0.01  # minimum exploration rate
+
 # Configuration Variables
-num_episodes = 1000 # number of training episodes
-grid1DSize = 100 # size of the 1D grid
-startState = 0 # starting state
+num_episodes        = 5000 # number of training episodes
+grid1DSize          = 100 # size of the 1D grid
+startState          = 0 # starting state
 goalState = (grid1DSize - 1)   # goal state 
+optimization_strategy = "epsilon_greedy" # Options: "epsilon_greedy" or "softmax"
+
+# display parameters
 sleep_time = 0 # time to sleep between episodes
-#exploration_strategy = "epsilon_greedy"  # Options: "epsilon_greedy" or "softmax"
-#temperature = 1.0  # Initial temperature for softmax exploration
-exploration_strategy = "softmax"  # Options: "epsilon_greedy" or "softmax"
-temperature = 1.0  # Initial temperature for softmax exploration
+max_rows_in_q_value_table = 10  # Maximum number of rows to display in Q-value table
+
+if (optimization_strategy == "softmax"):
+    # Softmax parameters
+    exploration_strategy = "softmax"  # Options: "epsilon_greedy" or "softmax"
+    temperature          = 1.0  # Initial temperature for softmax exploration
+    temperature_decay    = 0.9  # Multiplicative factor to decay temperature each episode
+    temperature_min      = 0.1  # Minimum temperature value (floor) for softmax exploration
+else:
+    # Epsilon-greedy parameters
+    exploration_strategy = "epsilon_greedy"  # Options: "epsilon_greedy" or "softmax"
+    learning_rate        = 0.1  # learning rate for Q-value updates
+    discount_factor      = 0.99  # discount factor for future rewards
+    epsilon              = 1.0  # initial exploration rate
+    epsilon_decay        = 0.99  # decay rate for exploration
+    epsilon_min          = 0.01  # minimum exploration rate
+
 
 # Init env. Init agent.
 step_count = 0
 env = GridWorld1D(size=grid1DSize, start_state=startState, goal_state=goalState)
-agent = QLearningAgent(actions=["left", "right"], learning_rate=0.1, discount_factor=0.99,
-                       epsilon=1.0, epsilon_decay=0.95, epsilon_min=0.01,
-                       exploration_strategy=exploration_strategy, temperature=temperature)
+agent = QLearningAgent(actions=["left", "right"], 
+                      learning_rate=learning_rate, 
+                      discount_factor=discount_factor,
+                      epsilon=epsilon, 
+                      epsilon_decay=epsilon_decay, 
+                      epsilon_min=epsilon_min,
+                      exploration_strategy=exploration_strategy, 
+                      temperature=temperature,
+                      temperature_decay=temperature_decay, 
+                      temperature_min=temperature_min)
 
 # Initialize lists to store episode and step data
 episode_data = []
@@ -78,9 +111,10 @@ stateTask = stateProgressBar.add_task("State tracking", total=grid1DSize-1)
 display_group = Group(progress, stateProgressBar, table) # Create initial display group
 
 with Live(display_group, refresh_per_second=50) as live:
-    for i in range(grid1DSize):
+    # Initialize table with initial rows
+    for i in range(max_rows_in_q_value_table):
         table.add_row(str(i), "0.0", "0.0", "stay")
-        live.update(table)
+    live.update(table)
     # end for i loop to init the display table
 
     # Training loop
@@ -124,7 +158,7 @@ with Live(display_group, refresh_per_second=50) as live:
         
         # Update Displays. (progress bar and the Q-table)
         progress.update(task, description=f"Episode {episode+1} of {num_episodes}", advance=1)
-        table = plots.updateDisplayTableFromQTable(table, qtable)
+        table = plots.updateDisplayTableFromQTable(table, qtable, max_rows=max_rows_in_q_value_table)
         display_group = Group(progress, stateProgressBar, table)
         live.update(display_group)
         time.sleep(sleep_time)
@@ -133,17 +167,19 @@ with Live(display_group, refresh_per_second=50) as live:
 
 #end with Live loop
 
+
+
 # Final display update to show completion
 progress.update(task, description=f"Training completed", completed=num_episodes)
 live.update(display_group)
 print(f"Training completed in {end_time - start_time:.2f} seconds")
 
-
 # Plot steps per episode
 plots.plotStepsPerEpisode(plt, episode_data, step_data)
 
 # Plot temperature decay
-plots.plotTemperatureDecayPerEpisode(plt, episode_data, temperature_data)
+if optimization_strategy == "softmax":
+    plots.plotTemperatureDecayPerEpisode(plt, episode_data, temperature_data)
 
 # Plot Q-values for last two states
 statesOfInterest = list(range(0, grid1DSize, 5)) + [grid1DSize-1]
