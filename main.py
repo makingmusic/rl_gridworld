@@ -28,14 +28,14 @@ def isTrainingCompleteByStepCount(stepCounterTable):
 #end def isTrainingCompleteByStepCount
 
 # default values for learning parameters
-temperature = 1.0  # default Initial temperature for softmax exploration
-temperature_decay = 0.9  # default Multiplicative factor to decay temperature each episode
-temperature_min = 0.1  # default Minimum temperature value (floor) for softmax exploration
-learning_rate = 0.1  # learning rate for Q-value updates
-discount_factor = 0.99  # discount factor for future rewards
-epsilon = 1.0  # initial exploration rate
-epsilon_decay = 0.95  # decay rate for exploration
-epsilon_min = 0.01  # minimum exploration rate
+temperature         = 1.0  # default Initial temperature for softmax exploration
+temperature_decay   = 0.9  # default Multiplicative factor to decay temperature each episode
+temperature_min     = 0.1  # default Minimum temperature value (floor) for softmax exploration
+learning_rate       = 0.1  # learning rate for Q-value updates
+discount_factor     = 0.99  # discount factor for future rewards
+epsilon             = 1.0  # initial exploration rate
+epsilon_decay       = 0.95  # decay rate for exploration
+epsilon_min         = 0.01  # minimum exploration rate
 
 # Configuration Variables
 num_episodes        = 5000 # number of training episodes
@@ -79,12 +79,12 @@ agent = QLearningAgent(actions=["left", "right"],
                       temperature_min=temperature_min)
 
 # Initialize lists to store episode and step data
-episode_data = []
-step_data = []
-epsilon_data = []
+episode_data     = []
+step_data        = []
+epsilon_data     = []
 temperature_data = []  # Add list to store temperature values
-qtable_data = []  # Will store Q-tables for each episode
-current_steps = 0 # Initialize step counter variable
+qtable_data      = []  # Will store Q-tables for each episode
+current_steps    = 0   # Initialize step counter variable
 # Initialize the display tables and progress bar
 
 table = plots.initDisplayTable()
@@ -187,5 +187,3 @@ plots.plotQTableValues(plt, qtable_data, statesOfInterest)
 
 plt.tight_layout()
 plt.show()
-
-
