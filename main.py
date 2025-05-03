@@ -182,15 +182,8 @@ if optimization_strategy == "softmax":
     plots.plotTemperatureDecayPerEpisode(plt, episode_data, temperature_data)
 
 # Plot Q-values for last two states
-countSkippedStates = 5 # prints every countSkippedStates states 
-statesOfInterest = list(range(0, grid1DSize, countSkippedStates)) + [grid1DSize-1]
-#plots.plotQTableValues(plt, qtable_data, statesOfInterest)
-
-# Plot Q-value differences
-#plots.plotQValueDifference(plt, qtable_data, statesOfInterest)
-
-# Plot action preferences
-plots.plotActionPreferences(plt, qtable_data, grid1DSize)
+statesOfInterest = list(range(0, grid1DSize, 5)) + [grid1DSize-1]
+plots.plotQTableValues(plt, qtable_data, statesOfInterest)
 
 plt.tight_layout()
 plt.show()

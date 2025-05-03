@@ -157,85 +157,90 @@ def updateStepCounter(stepTable, episode, steps):
         stepTable.add_row(str(episode), str(steps))
 #end def updateStepCounter
 
-def plotStepsPerEpisode(pltPointer, episode_data, step_data, num_first_episodes=10, num_last_episodes=200):
-    """
-    Plot steps per episode showing the first n episodes and last m episodes.
+def plotStepsPerEpisode(pltPointer, episode_data, step_data):
+    pltPointer.figure(figsize=(pltPointer.rcParams['figure.figsize'][0] * 0.8, pltPointer.rcParams['figure.figsize'][1] * 0.8))
     
-    Args:
-        pltPointer: Matplotlib pointer for plotting
-        episode_data: List of episode numbers
-        step_data: List of steps taken per episode
-        num_first_episodes: Number of episodes to show at the beginning (default: 10)
-        num_last_episodes: Number of episodes to show at the end (default: 200)
-    """
-    # Create a new figure with increased width
-    pltPointer.figure(figsize=(15, 8))
-    
-    # Get the first n episodes and last m episodes
-    first_episodes = episode_data[:num_first_episodes]
-    first_steps = step_data[:num_first_episodes]
-    last_episodes = episode_data[-num_last_episodes:]
-    last_steps = step_data[-num_last_episodes:]
-    
-    # Create two subplots with a broken axis
-    from matplotlib.gridspec import GridSpec
-    gs = GridSpec(1, 2, width_ratios=[1, 2], wspace=0.05)
-    
-    # First subplot (first n episodes)
-    ax1 = pltPointer.subplot(gs[0])
-    ax1.plot(first_episodes, first_steps, 'b-', label='Steps')
-    
-    # Add labels for first n episodes
-    for i in range(len(first_episodes)):
-        ax1.annotate(f'{first_steps[i]}', 
-                    xy=(first_episodes[i], first_steps[i]),
-                    xytext=(0, 10), textcoords='offset points',
-                    ha='center', va='bottom')
-    
-    # Second subplot (last m episodes)
-    ax2 = pltPointer.subplot(gs[1])
-    ax2.plot(last_episodes, last_steps, 'b-', label='Steps')
-    
-    # Add labels for last m episodes
-    for i in range(len(last_episodes)):
-        ax2.annotate(f'{last_steps[i]}', 
-                    xy=(last_episodes[i], last_steps[i]),
-                    xytext=(0, 10), textcoords='offset points',
-                    ha='center', va='bottom')
-    
-    # Set the same y-axis limits for both subplots
-    y_min = min(min(first_steps), min(last_steps))
-    y_max = max(max(first_steps), max(last_steps))
-    y_margin = (y_max - y_min) * 0.1  # 10% margin
-    ax1.set_ylim(y_min - y_margin, y_max + y_margin)
-    ax2.set_ylim(y_min - y_margin, y_max + y_margin)
-    
-    # Add break marks
-    d = .015  # size of diagonal lines
-    kwargs = dict(transform=ax1.transAxes, color='k', clip_on=False)
-    ax1.plot((1-d, 1+d), (-d, +d), **kwargs)
-    ax1.plot((1-d, 1+d), (1-d, 1+d), **kwargs)
-    
-    kwargs.update(transform=ax2.transAxes)
-    ax2.plot((-d, +d), (1-d, 1+d), **kwargs)
-    ax2.plot((-d, +d), (-d, +d), **kwargs)
-    
-    # Set labels and title
-    ax1.set_xlabel('Episode', fontsize=12)
-    ax2.set_xlabel('Episode', fontsize=12)
-    ax1.set_ylabel('Steps', fontsize=12)
-    pltPointer.suptitle(f'Steps per Episode (First {num_first_episodes} and Last {num_last_episodes} Episodes)', fontsize=14, y=1.05)
-    
-    # Add grid to both subplots
-    ax1.grid(True, linestyle='--', alpha=0.7)
-    ax2.grid(True, linestyle='--', alpha=0.7)
-    
-    # Hide the right spine of the first subplot and the left spine of the second subplot
-    ax1.spines['right'].set_visible(False)
-    ax2.spines['left'].set_visible(False)
-    
-    # Adjust layout
-    pltPointer.tight_layout()
+    # Determine which episodes to display
+    if len(episode_data) <= 20:
+        # If 20 or fewer episodes, show all of them
+        display_episodes = episode_data
+        display_steps = step_data
+        
+        # Plot all episodes
+        pltPointer.plot(display_episodes, display_steps, 'b-', label='Steps')
+        
+        # Add labels for all points
+        for i in range(len(display_episodes)):
+            pltPointer.annotate(f'{display_steps[i]}', 
+                               xy=(display_episodes[i], display_steps[i]),
+                               xytext=(0, 10), textcoords='offset points',
+                               ha='center', va='bottom')
+    else:
+        # Otherwise, show first 10 and last 10 episodes with a broken axis
+        first_episodes = episode_data[:10]
+        first_steps = step_data[:10]
+        last_episodes = episode_data[-10:]
+        last_steps = step_data[-10:]
+        
+        # Create two subplots with a broken axis
+        from matplotlib.gridspec import GridSpec
+        gs = GridSpec(1, 2, width_ratios=[1, 1], wspace=0.05)
+        
+        # First subplot (first 10 episodes)
+        ax1 = pltPointer.subplot(gs[0])
+        ax1.plot(first_episodes, first_steps, 'b-', label='Steps')
+        
+        # Add labels for first 10 episodes
+        for i in range(len(first_episodes)):
+            ax1.annotate(f'{first_steps[i]}', 
+                        xy=(first_episodes[i], first_steps[i]),
+                        xytext=(0, 10), textcoords='offset points',
+                        ha='center', va='bottom')
+        
+        # Second subplot (last 10 episodes)
+        ax2 = pltPointer.subplot(gs[1])
+        ax2.plot(last_episodes, last_steps, 'b-', label='Steps')
+        
+        # Add labels for last 10 episodes
+        for i in range(len(last_episodes)):
+            ax2.annotate(f'{last_steps[i]}', 
+                        xy=(last_episodes[i], last_steps[i]),
+                        xytext=(0, 10), textcoords='offset points',
+                        ha='center', va='bottom')
+        
+        # Set the same y-axis limits for both subplots
+        y_min = min(min(first_steps), min(last_steps))
+        y_max = max(max(first_steps), max(last_steps))
+        y_margin = (y_max - y_min) * 0.1  # 10% margin
+        ax1.set_ylim(y_min - y_margin, y_max + y_margin)
+        ax2.set_ylim(y_min - y_margin, y_max + y_margin)
+        
+        # Add break marks
+        d = .015  # size of diagonal lines
+        kwargs = dict(transform=ax1.transAxes, color='k', clip_on=False)
+        ax1.plot((1-d, 1+d), (-d, +d), **kwargs)
+        ax1.plot((1-d, 1+d), (1-d, 1+d), **kwargs)
+        
+        kwargs.update(transform=ax2.transAxes)
+        ax2.plot((-d, +d), (1-d, 1+d), **kwargs)
+        ax2.plot((-d, +d), (-d, +d), **kwargs)
+        
+        # Set labels and title
+        ax1.set_xlabel('Episode')
+        ax2.set_xlabel('Episode')
+        ax1.set_ylabel('Steps')
+        pltPointer.suptitle('Steps per Episode', y=1.05)
+        
+        # Add grid to both subplots
+        ax1.grid(True)
+        ax2.grid(True)
+        
+        # Hide the right spine of the first subplot and the left spine of the second subplot
+        ax1.spines['right'].set_visible(False)
+        ax2.spines['left'].set_visible(False)
+        
+        # Adjust layout
+        #pltPointer.tight_layout() #todo: revisit
 # end def plotStepsPerEpisode
 
 def plotEpsilonDecayPerEpisode(pltPointer, episode_data, epsilon_data):
