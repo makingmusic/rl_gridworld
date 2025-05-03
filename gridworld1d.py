@@ -42,7 +42,8 @@ class GridWorld1D:
         if next_state == self.goal_state:
             reward = 1.0  # reached goal
         else:
-            reward = -0.01  # small negative reward for each step to encourage efficiency
+            #reward = 0.0  # no reward for staying in the same state
+            reward = -0.1  # small negative reward for each step to encourage efficiency
         
         # Check if episode is done
         done = (next_state == self.goal_state)
