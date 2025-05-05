@@ -6,7 +6,7 @@ I did learn a ton and I find it much more useful to learn through this method th
 
 ## The setup
 
-The setup is the simplest RL implemention that I could find to learn on.It is a 1D world. Simple as that.
+The setup is the simplest RL implemention that I could find to learn on. It is a 1D world. Simple as that.
 
 At the beginning you just define a) the end goal - which is to reach state N and b) the rules of the game.
 
@@ -21,14 +21,19 @@ It keeps a python list against each state. This list contains a dict with two it
    Both of these are numbers that are the "expected reward" on taking that action. The agent takes the action that has the greatest reward.
 
 Well, if only life was so simple. It is not.
+The agent supports two exploration strategies:
 
+Approach one is "Epsilon-greedy"
 For reasons known as "epsilon-greedy learning", the agent doesn't just take the higher reward of the two. Instead it generates a random number between 0 and 1 and if the number is < epsilon, then it will chose a random action out of left or right. Otherwise it will chose the larger of the two options. (Search for the text "xplore or exploit" in the function choose_action in the file q_agent.py).
 
 Now if the world was so simple, it would be awesome. It is not. epsilon, it turns out starts at a high value (0.95) and slowly reduces down to 0.01 in small increments. This means that it will nearly always random in the beginning and will lean on the learnt data as it progresses. Makes sense, doesn't it ?
 
 The cool thing I like about my default values is that it NEVER STOPS LEARNING. See how the learning parameters are setup in main.py by searching for the text "Configuration Variables"
+Now there is also an implementation for "softmax"
+   - Actions are selected based on their Q-values using the softmax function
+   - Temperature parameter controls exploration (high = more random, low = more greedy)
+   - Temperature decays over time from 1.0 to 0.1
 
-The agent tries to learn this over many "episodes". For larger grid sizes, you need more episodes.
 
 # Why is there so much code?
 
@@ -48,27 +53,47 @@ Nearly half of the code in main.py (and 100% of the code in plots.py) is for me 
 
 You can modify the following parameters in `main.py`:
 
-- `num_episodes`: Number of training episodes (default: 1000)
+### Environment Parameters
 - `grid1DSize`: Size of the 1D grid (default: 100)
 - `startState`: Starting position (default: 0)
 - `goalState`: Goal position (default: grid1DSize - 1)
-- `sleep_time`: Time to pause between episodes (default: 0)
 
-## Things of note:
+### Training Parameters
+- `num_episodes`: Number of training episodes (default: 5000)
+- `optimization_strategy`: Either "epsilon_greedy" or "softmax" (default: "epsilon_greedy")
 
 - Training beyond 100 states is just a pain and I only do it for fun
-- Adding a reward of -0.01 at every step was a MAJOR breakthrough (See "Determine reward" in gridworld1d.py). Think about why - this was super fun for me. Without this reward, I just couldn't train past 50 states in reasonable cpu time.
+- Adding a reward of -0.01 at every step was a MAJOR breakthrough (See "Determine reward" in gridworld1d.py). Think about why - 
+this was super fun for me. Without this reward, I just couldn't train past 50 states in reasonable cpu time.
 - You will find a python notebook file (main.ipynb). It is a failed attempt to make this run in a notebook.
 
-## Future
+### Epsilon-Greedy Parameters (when optimization_strategy = "epsilon_greedy")
+- `learning_rate`: Learning rate for Q-value updates (default: 0.1)
+- `discount_factor`: Discount factor for future rewards (default: 0.99)
+- `epsilon`: Initial exploration rate (default: 1.0)
+- `epsilon_decay`: Decay rate for exploration (default: 0.99)
+- `epsilon_min`: Minimum exploration rate (default: 0.01)
 
-I want to play with:
+### Softmax Parameters (when optimization_strategy = "softmax")
+- `temperature`: Initial temperature for softmax exploration (default: 1.0)
+- `temperature_decay`: Decay rate for temperature (default: 0.9)
+- `temperature_min`: Minimum temperature value (default: 0.1)
 
+### Display Parameters
+- `sleep_time`: Time to pause between episodes (default: 0)
+- `max_rows_in_q_value_table`: Maximum number of rows to display in Q-value table (default: 10)
+
+## Visualization Features
+The project includes several visualization features to help understand the learning process:
+
+Future: 
 - starting at different points in the state machine
 - having the goal be another point than the extreme state on the right.
-- allow "jumps", which may be X number of steps that can be taken together. Would be fun to see how learning improves (or becomes worse) by higher values of X.
+- allow "jumps", which may be X number of steps that can be taken together. Would be fun to see 
+how learning improves (or becomes worse) by higher values of X.
 - Add obstacles or forbidden states so the only way to reach the end would be jump over them.
-- Changing the tradeoffs between exploitation vs exploration. There are many algorithsm avaiable include the infamous softmax that are used in modern LLMs too. I want to get there.
+- Changing the tradeoffs between exploitation vs exploration. There are many algorithsm avaiable 
+include the infamous softmax that are used in modern LLMs too. I want to get there.
  
 ## GPT Says I should try the following:
 
@@ -128,10 +153,35 @@ python main.py
 The program will:
 
 1. Initialize a 1D gridworld environment
-2. Create a Q-Learning agent
+2. Create a Q-Learning agent with the specified exploration strategy
 3. Train the agent for the specified number of episodes
 4. Display real-time progress using Rich
 5. Show final Q-values and learning curves
+
+## Future Improvements
+
+Potential areas for future development:
+
+1. **Advanced Exploration Strategies**:
+   - Upper Confidence Bound (UCB)
+   - Thompson Sampling
+   - Boltzmann Exploration
+
+2. **Environment Enhancements**:
+   - Multiple goal states
+   - Obstacles and forbidden states
+   - Stochastic transitions
+   - Variable step sizes
+
+3. **Learning Algorithm Extensions**:
+   - Double Q-Learning
+   - Prioritized Experience Replay
+   - Dueling Network Architectures
+
+4. **Visualization Improvements**:
+   - Interactive plots
+   - 3D value function visualization
+   - Policy heatmaps
 
 ## License
 
