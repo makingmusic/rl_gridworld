@@ -8,6 +8,8 @@ from rich.panel    import Panel
 def initDisplayTable():
     table = Table()
     table.add_column("State")
+    table.add_column("Up")
+    table.add_column("Down")
     table.add_column("Left")
     table.add_column("Right")
     table.add_column("Decision")
@@ -15,6 +17,15 @@ def initDisplayTable():
 #end def initDisplayTable
 
 def updateDisplayTableFromQTable(display_table, qtable, max_rows=20):
+    # Create a new table
+    new_table = Table()
+    new_table.add_column("State")
+    new_table.add_column("Up")
+    new_table.add_column("Down")
+    new_table.add_column("Left")
+    new_table.add_column("Right")
+    new_table.add_column("Decision")
+
     # Calculate the step size to show only max_rows rows
     total_states = len(qtable)
     if total_states <= max_rows:
@@ -27,31 +38,33 @@ def updateDisplayTableFromQTable(display_table, qtable, max_rows=20):
     # Get the states we want to show
     states_to_show = sorted(qtable.keys())[::step_size]
     
-    # Update existing rows or add new ones if needed
-    for i, state in enumerate(states_to_show):
+    # Add rows to the new table
+    for state in states_to_show:
         actions = qtable[state]
+        upValue = float(actions['up'])
+        downValue = float(actions['down'])
         leftValue = float(actions['left'])
         rightValue = float(actions['right'])
-        decision = "stay" if leftValue == rightValue else ("<<Left<<" if leftValue > rightValue else ">>Right>>")
+        
+        # Find the best action
+        action_values = {'up': upValue, 'down': downValue, 'left': leftValue, 'right': rightValue}
+        best_action = max(action_values.items(), key=lambda x: x[1])
+        
+        # Create decision string
+        if all(v == 0.0 for v in action_values.values()):
+            decision = "stay"
+        else:
+            decision = f">>{best_action[0]}>>"
+        
         stateValueStr = str(state)
+        upValueStr = str(round(upValue, 4))
+        downValueStr = str(round(downValue, 4))
         leftValueStr = str(round(leftValue, 4))
         rightValueStr = str(round(rightValue, 4))
         
-        if i < len(display_table.rows):
-            # Update existing row
-            display_table.columns[0]._cells[i] = stateValueStr
-            display_table.columns[1]._cells[i] = leftValueStr
-            display_table.columns[2]._cells[i] = rightValueStr
-            display_table.columns[3]._cells[i] = decision
-        else:
-            # Add new row if needed
-            display_table.add_row(stateValueStr, leftValueStr, rightValueStr, decision)
+        new_table.add_row(stateValueStr, upValueStr, downValueStr, leftValueStr, rightValueStr, decision)
     
-    # If we have more rows than needed, remove the extra ones
-    while len(display_table.rows) > len(states_to_show):
-        display_table.rows.pop()
-    
-    return display_table
+    return new_table
 #end def updateDisplayTableFromQTable
 
 def plotQTableValues(matlibplotpointer, qtable_data, state_numbers):
@@ -157,12 +170,12 @@ def updateStepCounter(stepTable, episode, steps):
         stepTable.add_row(str(episode), str(steps))
 #end def updateStepCounter
 
-def plotStepsPerEpisode(pltPointer, episode_data, step_data):
+def plotStepsPerEpisode(pltPointer, episode_data, step_data, num_episodes=20):
     pltPointer.figure(figsize=(pltPointer.rcParams['figure.figsize'][0] * 0.8, pltPointer.rcParams['figure.figsize'][1] * 0.8))
     
     # Determine which episodes to display
-    if len(episode_data) <= 20:
-        # If 20 or fewer episodes, show all of them
+    if len(episode_data) <= 2 * num_episodes:
+        # If total episodes is less than or equal to 2*num_episodes, show all of them
         display_episodes = episode_data
         display_steps = step_data
         
@@ -176,32 +189,32 @@ def plotStepsPerEpisode(pltPointer, episode_data, step_data):
                                xytext=(0, 10), textcoords='offset points',
                                ha='center', va='bottom')
     else:
-        # Otherwise, show first 10 and last 10 episodes with a broken axis
-        first_episodes = episode_data[:10]
-        first_steps = step_data[:10]
-        last_episodes = episode_data[-10:]
-        last_steps = step_data[-10:]
+        # Otherwise, show first num_episodes and last num_episodes episodes with a broken axis
+        first_episodes = episode_data[:num_episodes]
+        first_steps = step_data[:num_episodes]
+        last_episodes = episode_data[-num_episodes:]
+        last_steps = step_data[-num_episodes:]
         
         # Create two subplots with a broken axis
         from matplotlib.gridspec import GridSpec
         gs = GridSpec(1, 2, width_ratios=[1, 1], wspace=0.05)
         
-        # First subplot (first 10 episodes)
+        # First subplot (first num_episodes episodes)
         ax1 = pltPointer.subplot(gs[0])
         ax1.plot(first_episodes, first_steps, 'b-', label='Steps')
         
-        # Add labels for first 10 episodes
+        # Add labels for first num_episodes episodes
         for i in range(len(first_episodes)):
             ax1.annotate(f'{first_steps[i]}', 
                         xy=(first_episodes[i], first_steps[i]),
                         xytext=(0, 10), textcoords='offset points',
                         ha='center', va='bottom')
         
-        # Second subplot (last 10 episodes)
+        # Second subplot (last num_episodes episodes)
         ax2 = pltPointer.subplot(gs[1])
         ax2.plot(last_episodes, last_steps, 'b-', label='Steps')
         
-        # Add labels for last 10 episodes
+        # Add labels for last num_episodes episodes
         for i in range(len(last_episodes)):
             ax2.annotate(f'{last_steps[i]}', 
                         xy=(last_episodes[i], last_steps[i]),

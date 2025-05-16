@@ -25,15 +25,15 @@ epsilon_decay = 0.99
 epsilon_min = 0.01
 
 # Grid Configuration Variables 
-num_episodes = 500  # number of training episodes
+num_episodes = 5000  # number of training episodes
 grid_size = 5  # size of the 2D grid (grid_size x grid_size)
 start_pos = (0, 0)  # starting position
 goal_pos = (4, 4)  # goal position
 
 
 # display parameters
-sleep_time = 0  # time to sleep between episodes
-max_rows_in_q_value_table = 10  # Maximum number of rows to display in Q-value table
+sleep_time = 0   # time to sleep between episodes
+max_rows_in_q_value_table = 25  # Maximum number of rows to display in Q-value table
 
 
 # Initialize environment and agent
@@ -81,9 +81,9 @@ posTask = posProgressBar.add_task("Position tracking", total=grid_size * grid_si
 display_group = Group(progress, posProgressBar, table)
 
 with Live(display_group, refresh_per_second=50) as live:
-    # Initialize table with initial rows
-    for i in range(max_rows_in_q_value_table):
-        table.add_row(str(i), "0.0", "0.0", "0.0", "0.0", "stay")
+    # Initialize table with one initial row
+    table = plots.initDisplayTable()
+    table.add_row("(0, 0)", "0.0", "0.0", "0.0", "0.0", "stay")  # Add one initial row
     live.update(table)
 
     # Training loop
@@ -138,6 +138,8 @@ with Live(display_group, refresh_per_second=50) as live:
 
 # Final display update to show completion
 progress.update(task, description=f"Training completed", completed=num_episodes)
+table = plots.updateDisplayTableFromQTable(table, agent.getQTable(), max_rows=max_rows_in_q_value_table)
+display_group = Group(progress, posProgressBar, table)
 live.update(display_group)
 print(f"Training completed in {end_time - start_time:.2f} seconds")
 

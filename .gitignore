@@ -1,6 +1,7 @@
 # Python
 __pycache__/
 myenv/
+.venv/
 *.py[cod]
 *$py.class
 *.so
