@@ -1,16 +1,28 @@
 # RL Gridworld
 
-This is a Reinforcement Learning implementation of Q-Learning in a 1D gridworld environment. Why you ask? Well, the reason is learn. Like really learn what is going on underneath.
+This is a Reinforcement Learning implementation of Q-Learning in both 1D and 2D gridworld environments. Why you ask? Well, the reason is learn. Like really learn what is going on underneath.
 
 I did learn a ton and I find it much more useful to learn through this method than reading a book. It is the reason I am keeping this repo public. May more people find this usefulness!
 
-## The setup
+## The Setup
 
-The setup is the simplest RL implemention that I could find to learn on. It is a 1D world. Simple as that.
+The project includes two different environments:
 
-At the beginning you just define a) the end goal - which is to reach state N and b) the rules of the game.
+### 1D Gridworld
+
+A simple 1D world where the agent can move left or right. The goal is to reach state N.
 
 Rules are simple: You can either go left or right (falling out at the edges not ok :) - obviously).
+
+### 2D Gridworld
+
+A more complex 2D world where the agent can move up, down, left, or right. The goal is to reach the bottom-right corner.
+
+Rules:
+
+- Agent can move in four directions: up, down, left, right
+- Cannot move outside the grid boundaries
+- Goal state is at the bottom-right corner (N-1, N-1)
 
 ## The agent
 
@@ -30,10 +42,10 @@ Now if the world was so simple, it would be awesome. It is not. epsilon, it turn
 
 The cool thing I like about my default values is that it NEVER STOPS LEARNING. See how the learning parameters are setup in main.py by searching for the text "Configuration Variables"
 Now there is also an implementation for "softmax"
-   - Actions are selected based on their Q-values using the softmax function
-   - Temperature parameter controls exploration (high = more random, low = more greedy)
-   - Temperature decays over time from 1.0 to 0.1
 
+- Actions are selected based on their Q-values using the softmax function
+- Temperature parameter controls exploration (high = more random, low = more greedy)
+- Temperature decays over time from 1.0 to 0.1
 
 # Why is there so much code?
 
@@ -54,20 +66,23 @@ Nearly half of the code in main.py (and 100% of the code in plots.py) is for me 
 You can modify the following parameters in `main.py`:
 
 ### Environment Parameters
+
 - `grid1DSize`: Size of the 1D grid (default: 100)
 - `startState`: Starting position (default: 0)
 - `goalState`: Goal position (default: grid1DSize - 1)
 
 ### Training Parameters
+
 - `num_episodes`: Number of training episodes (default: 5000)
 - `optimization_strategy`: Either "epsilon_greedy" or "softmax" (default: "epsilon_greedy")
 
 - Training beyond 100 states is just a pain and I only do it for fun
-- Adding a reward of -0.01 at every step was a MAJOR breakthrough (See "Determine reward" in gridworld1d.py). Think about why - 
-this was super fun for me. Without this reward, I just couldn't train past 50 states in reasonable cpu time.
+- Adding a reward of -0.01 at every step was a MAJOR breakthrough (See "Determine reward" in gridworld1d.py). Think about why -
+  this was super fun for me. Without this reward, I just couldn't train past 50 states in reasonable cpu time.
 - You will find a python notebook file (main.ipynb). It is a failed attempt to make this run in a notebook.
 
 ### Epsilon-Greedy Parameters (when optimization_strategy = "epsilon_greedy")
+
 - `learning_rate`: Learning rate for Q-value updates (default: 0.1)
 - `discount_factor`: Discount factor for future rewards (default: 0.99)
 - `epsilon`: Initial exploration rate (default: 1.0)
@@ -75,49 +90,53 @@ this was super fun for me. Without this reward, I just couldn't train past 50 st
 - `epsilon_min`: Minimum exploration rate (default: 0.01)
 
 ### Softmax Parameters (when optimization_strategy = "softmax")
+
 - `temperature`: Initial temperature for softmax exploration (default: 1.0)
 - `temperature_decay`: Decay rate for temperature (default: 0.9)
 - `temperature_min`: Minimum temperature value (default: 0.1)
 
 ### Display Parameters
+
 - `sleep_time`: Time to pause between episodes (default: 0)
 - `max_rows_in_q_value_table`: Maximum number of rows to display in Q-value table (default: 10)
 
 ## Visualization Features
+
 The project includes several visualization features to help understand the learning process:
 
-Future: 
+Future:
+
 - starting at different points in the state machine
 - having the goal be another point than the extreme state on the right.
-- allow "jumps", which may be X number of steps that can be taken together. Would be fun to see 
-how learning improves (or becomes worse) by higher values of X.
+- allow "jumps", which may be X number of steps that can be taken together. Would be fun to see
+  how learning improves (or becomes worse) by higher values of X.
 - Add obstacles or forbidden states so the only way to reach the end would be jump over them.
-- Changing the tradeoffs between exploitation vs exploration. There are many algorithsm avaiable 
-include the infamous softmax that are used in modern LLMs too. I want to get there.
- 
+- Changing the tradeoffs between exploitation vs exploration. There are many algorithsm avaiable
+  include the infamous softmax that are used in modern LLMs too. I want to get there.
+
 ## GPT Says I should try the following:
 
 1. Implement Multiple RL Algorithms
-	•	Value Iteration & Policy Iteration: Understand the differences between model-based and model-free approaches.
-	•	Monte Carlo Methods: Explore how sampling can be used for policy evaluation and improvement.
-	•	Temporal Difference Learning: Implement SARSA and Q-learning to compare on-policy and off-policy methods.
+   • Value Iteration & Policy Iteration: Understand the differences between model-based and model-free approaches.
+   • Monte Carlo Methods: Explore how sampling can be used for policy evaluation and improvement.
+   • Temporal Difference Learning: Implement SARSA and Q-learning to compare on-policy and off-policy methods.
 
 2. Introduce Function Approximation
-	•	Linear Function Approximation: Replace tabular methods with linear approximators to handle larger state spaces.
-	•	Neural Networks: Begin with simple feedforward networks before moving to more complex architectures.
+   • Linear Function Approximation: Replace tabular methods with linear approximators to handle larger state spaces.
+   • Neural Networks: Begin with simple feedforward networks before moving to more complex architectures.
 
 3. Experiment with Exploration Strategies
-	•	Epsilon-Greedy: Analyze how varying epsilon affects learning.
-	•	Softmax Action Selection: Implement and compare with epsilon-greedy.
-	•	Upper Confidence Bound (UCB): Explore how optimism in the face of uncertainty can drive exploration.
+   • Epsilon-Greedy: Analyze how varying epsilon affects learning.
+   • Softmax Action Selection: Implement and compare with epsilon-greedy.
+   • Upper Confidence Bound (UCB): Explore how optimism in the face of uncertainty can drive exploration.
 
 4. Incorporate Stochasticity
-	•	Action Noise: Introduce randomness in action outcomes to simulate real-world unpredictability.
-	•	Reward Noise: Add variability to rewards to study robustness.
+   • Action Noise: Introduce randomness in action outcomes to simulate real-world unpredictability.
+   • Reward Noise: Add variability to rewards to study robustness.
 
 5. Visualize Learning Progress
-	•	Heatmaps of State-Value Functions: Visualize how the agent’s understanding of the environment evolves.
-	•	Policy Arrows: Display the agent’s preferred action in each state.
+   • Heatmaps of State-Value Functions: Visualize how the agent’s understanding of the environment evolves.
+   • Policy Arrows: Display the agent’s preferred action in each state.
 
 ## Requirements / Installation etc...
 
@@ -147,7 +166,8 @@ pip install -r requirements.txt
 Run the main script to start the training:
 
 ```bash
-python main.py
+python 1dworld.py # for 1D world
+python 2dworld.py # for 2D world
 ```
 
 The program will:
@@ -163,17 +183,20 @@ The program will:
 Potential areas for future development:
 
 1. **Advanced Exploration Strategies**:
+
    - Upper Confidence Bound (UCB)
    - Thompson Sampling
    - Boltzmann Exploration
 
 2. **Environment Enhancements**:
+
    - Multiple goal states
    - Obstacles and forbidden states
    - Stochastic transitions
    - Variable step sizes
 
 3. **Learning Algorithm Extensions**:
+
    - Double Q-Learning
    - Prioritized Experience Replay
    - Dueling Network Architectures
