@@ -232,3 +232,99 @@ def display_actual_path(grid_size, start_pos, goal_pos, qtable):
         table.add_row(*row)
     return table
 
+def initDisplayTable():
+    """Initialize the display table for 1D Q-learning visualization."""
+    table = Table(title="Q-Values")
+    table.add_column("State", justify="right", style="cyan")
+    table.add_column("Left", justify="right", style="green")
+    table.add_column("Right", justify="right", style="green")
+    table.add_column("Best Action", justify="center", style="yellow")
+    return table
+
+def updateDisplayTableFromQTable(table, qtable, max_rows=10):
+    """Update the display table with current Q-values."""
+    # Clear existing rows
+    table.rows = []
+    
+    # Add rows for each state
+    for state in range(max_rows):
+        if state in qtable:
+            actions = qtable[state]
+            left_value = f"{actions['left']:.3f}"
+            right_value = f"{actions['right']:.3f}"
+            
+            # Determine best action
+            if actions['left'] > actions['right']:
+                best_action = "←"
+            elif actions['right'] > actions['left']:
+                best_action = "→"
+            else:
+                best_action = "-"
+                
+            table.add_row(str(state), left_value, right_value, best_action)
+        else:
+            table.add_row(str(state), "0.000", "0.000", "-")
+    
+    return table
+
+def display_1d_grid(grid_size, start_pos, goal_pos, qtable):
+    """Display a 1D grid showing the best actions using arrows."""
+    console = Console()
+    grid_display = []
+    
+    # Create the grid row
+    for pos in range(grid_size):
+        if pos in qtable:
+            actions = qtable[pos]
+            # Find best action
+            if actions['left'] > actions['right']:
+                cell = "←"
+            elif actions['right'] > actions['left']:
+                cell = "→"
+            else:
+                cell = "-"
+            
+            # Create text with appropriate color
+            text = Text(cell)
+            if pos == start_pos:
+                text.stylize('bold green')
+            elif pos == goal_pos:
+                text.stylize('bold red')
+            grid_display.append(text)
+        else:
+            grid_display.append(Text("-"))
+    
+    # Create table
+    table = Table(show_header=False, box=None, pad_edge=False)
+    for _ in range(grid_size):
+        table.add_column()
+    table.add_row(*grid_display)
+    return table
+
+def plotQTableValues(pltPointer, qtable_data, states_of_interest):
+    """Plot Q-values for specific states over episodes."""
+    pltPointer.figure(figsize=(pltPointer.rcParams['figure.figsize'][0] * 0.8, pltPointer.rcParams['figure.figsize'][1] * 0.8))
+    
+    # Create a plot for each state of interest
+    for state in states_of_interest:
+        # Extract Q-values for this state over episodes
+        left_values = []
+        right_values = []
+        episodes = []
+        
+        for episode, qtable in enumerate(qtable_data):
+            if isinstance(qtable, dict) and state in qtable:
+                left_values.append(qtable[state]['left'])
+                right_values.append(qtable[state]['right'])
+                episodes.append(episode)
+        
+        if episodes:  # Only plot if we have data for this state
+            pltPointer.plot(episodes, left_values, 'b-', label=f'State {state} Left')
+            pltPointer.plot(episodes, right_values, 'r-', label=f'State {state} Right')
+    
+    pltPointer.xlabel('Episode')
+    pltPointer.ylabel('Q-Value')
+    pltPointer.title('Q-Values Over Time')
+    pltPointer.legend()
+    pltPointer.grid(True)
+

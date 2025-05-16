@@ -21,14 +21,13 @@ epsilon_min         = 0.01  # minimum exploration rate
 
 # Configuration Variables
 num_episodes        = 5000 # number of training episodes
-grid1DSize          = 10 # size of the 1D grid
+grid1DSize          = 50 # size of the 1D grid
 startState          = 0 # starting state
 goalState = (grid1DSize - 1)   # goal state 
 optimization_strategy = "epsilon_greedy" # Options: "epsilon_greedy" or "softmax"
 
 # display parameters
 sleep_time = 0 # time to sleep between episodes
-max_rows_in_q_value_table = 10  # Maximum number of rows to display in Q-value table
 
 if (optimization_strategy == "softmax"):
     # Softmax parameters
@@ -44,7 +43,6 @@ else:
     epsilon              = 1.0  # initial exploration rate
     epsilon_decay        = 0.99  # decay rate for exploration
     epsilon_min          = 0.01  # minimum exploration rate
-
 
 # Init env. Init agent.
 step_count = 0
@@ -67,9 +65,8 @@ epsilon_data     = []
 temperature_data = []  # Add list to store temperature values
 qtable_data      = []  # Will store Q-tables for each episode
 current_steps    = 0   # Initialize step counter variable
-# Initialize the display tables and progress bar
 
-table = plots.initDisplayTable()
+# Initialize progress bars
 progress = Progress(
     SpinnerColumn(),  # Shows a spinning animation
     TextColumn("Training progress:"),  # Task description
@@ -81,6 +78,7 @@ progress = Progress(
     transient=True
 )
 task = progress.add_task("Training Q-learning agent", total=num_episodes)
+
 # Add state progress bar
 stateProgressBar = Progress(
     SpinnerColumn(),
@@ -90,15 +88,12 @@ stateProgressBar = Progress(
     transient=True
 )
 stateTask = stateProgressBar.add_task("State tracking", total=grid1DSize-1)
-display_group = Group(progress, stateProgressBar, table) # Create initial display group
+
+# Initialize grid display
+grid_display = plots.display_1d_grid(grid1DSize, startState, goalState, agent.getQTable())
+display_group = Group(progress, stateProgressBar, grid_display)
 
 with Live(display_group, refresh_per_second=50) as live:
-    # Initialize table with initial rows
-    for i in range(max_rows_in_q_value_table):
-        table.add_row(str(i), "0.0", "0.0", "stay")
-    live.update(table)
-    # end for i loop to init the display table
-
     # Training loop
     start_time = time.time()
     for episode in range(num_episodes):
@@ -115,10 +110,8 @@ with Live(display_group, refresh_per_second=50) as live:
             step_count += 1
             
             stateProgressBar.update(stateTask, completed=state) # Update state progress bar
-            #updateStepCounter(stepCounterTable, episode, step_count) # todo: add this back in
             live.update(display_group)
-        # end while loop
-         
+        
         # Store episode and step data
         episode_data.append(episode)
         step_data.append(step_count)
@@ -138,18 +131,14 @@ with Live(display_group, refresh_per_second=50) as live:
         # Decay exploration rate at end of episode
         agent.decay_epsilon()
         
-        # Update Displays. (progress bar and the Q-table)
+        # Update Displays
         progress.update(task, description=f"Episode {episode+1} of {num_episodes}", advance=1)
-        table = plots.updateDisplayTableFromQTable(table, qtable, max_rows=max_rows_in_q_value_table)
-        display_group = Group(progress, stateProgressBar, table)
+        grid_display = plots.display_1d_grid(grid1DSize, startState, goalState, qtable)
+        display_group = Group(progress, stateProgressBar, grid_display)
         live.update(display_group)
         time.sleep(sleep_time)
-    # end for episode loop
+
     end_time = time.time()
-
-#end with Live loop
-
-
 
 # Final display update to show completion
 progress.update(task, description=f"Training completed", completed=num_episodes)
