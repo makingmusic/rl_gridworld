@@ -1,10 +1,8 @@
 import time
 import matplotlib.pyplot as plt
 from rich.live import Live
-from rich.table import Table
 from rich.progress import BarColumn, Progress, SpinnerColumn, TextColumn, MofNCompleteColumn, TimeElapsedColumn, TimeRemainingColumn, TaskProgressColumn
-from rich.console import Group
-from rich.panel import Panel
+from rich.console import Group, Console
 import plots
 from q_agent2D import QLearningAgent2D
 from gridworld2d import GridWorld2D
@@ -25,15 +23,14 @@ epsilon_decay = 0.99
 epsilon_min = 0.01
 
 # Grid Configuration Variables 
-num_episodes = 10000  # number of training episodes
-grid_size = 5  # size of the 2D grid (grid_size x grid_size)
+num_episodes = 1000  # number of training episodes
+grid_size = 10  # size of the 2D grid (grid_size x grid_size)
 start_pos = (0, 0)  # starting position
 goal_pos = (grid_size-1, grid_size-1)  # goal position
 
 
 # display parameters
 sleep_time = 0   # time to sleep between episodes
-max_rows_in_q_value_table = 65  # Maximum number of rows to display in Q-value table
 
 
 # Initialize environment and agent
@@ -54,8 +51,7 @@ step_data = []
 epsilon_data = []
 qtable_data = []
 
-# Initialize the display tables and progress bar
-table = plots.initDisplayTable()
+# Initialize the progress bars
 progress = Progress(
     SpinnerColumn(),
     TextColumn("Training progress:"),
@@ -78,14 +74,13 @@ posProgressBar = Progress(
 )
 posTask = posProgressBar.add_task("Position tracking", total=grid_size * grid_size - 1)
 
-display_group = Group(progress, posProgressBar, table)
+# Initialize grid display
+grid_display = plots.create_grid_display(grid_size, start_pos, goal_pos, agent.getQTable())
+
+# Create display group with progress bars first
+display_group = Group(progress, posProgressBar)
 
 with Live(display_group, refresh_per_second=50) as live:
-    # Initialize table with one initial row
-    table = plots.initDisplayTable()
-    table.add_row("(0, 0)", "0.0", "0.0", "0.0", "0.0", "stay")  # Add one initial row
-    live.update(table)
-
     # Training loop
     start_time = time.time()
     for episode in range(num_episodes):
@@ -105,6 +100,12 @@ with Live(display_group, refresh_per_second=50) as live:
             current_pos = env.get_state()
             pos_value = current_pos[0] * grid_size + current_pos[1]
             posProgressBar.update(posTask, completed=pos_value)
+            
+            # Update grid display and show it after progress bars
+            grid_display = plots.update_grid_display(grid_display, agent.getQTable(), start_pos, goal_pos)
+            grid_table = plots.grid_to_table(grid_display)
+            from rich.panel import Panel
+            display_group = Group(progress, posProgressBar, Panel(grid_table, title="Grid"))
             live.update(display_group)
 
         # Store episode and step data
@@ -129,8 +130,6 @@ with Live(display_group, refresh_per_second=50) as live:
 
         # Update Displays
         progress.update(task, description=f"Episode {episode+1} of {num_episodes}", advance=1)
-        table = plots.updateDisplayTableFromQTable(table, qtable, max_rows=max_rows_in_q_value_table)
-        display_group = Group(progress, posProgressBar, table)
         live.update(display_group)
         time.sleep(sleep_time)
 
@@ -138,17 +137,18 @@ with Live(display_group, refresh_per_second=50) as live:
 
 # Final display update to show completion
 progress.update(task, description=f"Training completed", completed=num_episodes)
-table = plots.updateDisplayTableFromQTable(table, agent.getQTable(), max_rows=max_rows_in_q_value_table)
-display_group = Group(progress, posProgressBar, table)
+grid_display = plots.update_grid_display(grid_display, agent.getQTable(), start_pos, goal_pos)
 live.update(display_group)
 print(f"Training completed in {end_time - start_time:.2f} seconds")
 
+# Display the actual path taken by the model
+path_table = plots.display_actual_path(grid_size, start_pos, goal_pos, agent.getQTable())
+console = Console()
+console.print("\nActual path taken by the model:")
+console.print(Panel(path_table, title="Path"))
+
 # Plot steps per episode
 plots.plotStepsPerEpisode(plt, episode_data, step_data)
-
-# Plot Q-values for selected states
-states_of_interest = [(0, 0), (1,1),  (2, 2), (4, 4)]  # Example states to plot
-#plots.plotQTableValues(plt, qtable_data, states_of_interest)
 
 plt.tight_layout()
 plt.show() 
