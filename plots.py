@@ -170,18 +170,17 @@ def grid_to_table(grid_display):
     return table
 
 def display_actual_path(grid_size, start_pos, goal_pos, qtable):
-    """Display the actual path that the model would take from start to goal."""
+    """Display the actual path that the model would take from start to goal, with clearer visuals."""
     console = Console()
     grid_display = []
-    
-    # Initialize empty grid
     for _ in range(grid_size):
-        grid_display.append(['-'] * grid_size)
-    
+        grid_display.append(['·'] * grid_size)  # Use middle dot for non-path
+
     # Start from the start position
     current_pos = start_pos
     path = [current_pos]
-    
+    path_arrows = {}
+
     # Follow the best actions until we reach the goal
     while current_pos != goal_pos:
         actions = qtable[current_pos]
@@ -192,17 +191,14 @@ def display_actual_path(grid_size, start_pos, goal_pos, qtable):
             'right': actions['right']
         }
         best_action = max(action_values.items(), key=lambda x: x[1])[0]
-        
-        # Map actions to arrow symbols
         arrows = {
             'up': '↑',
             'down': '↓',
             'left': '←',
             'right': '→'
         }
-        
-        # Update current position based on action
         x, y = current_pos
+        path_arrows[(x, y)] = arrows[best_action]
         if best_action == 'up':
             current_pos = (x, y - 1)
         elif best_action == 'down':
@@ -211,13 +207,8 @@ def display_actual_path(grid_size, start_pos, goal_pos, qtable):
             current_pos = (x - 1, y)
         elif best_action == 'right':
             current_pos = (x + 1, y)
-            
-        # Add to path
         path.append(current_pos)
-        
-        # Update grid display
-        grid_display[y][x] = arrows[best_action]
-    
+
     # Create the final grid display
     final_display = []
     for row in range(grid_size):
@@ -228,16 +219,16 @@ def display_actual_path(grid_size, start_pos, goal_pos, qtable):
                 display_row.append(Text('S', style='bold green'))
             elif pos == goal_pos:
                 display_row.append(Text('G', style='bold red'))
+            elif pos in path_arrows:
+                display_row.append(Text(path_arrows[pos], style='bold cyan'))
             else:
-                display_row.append(Text(grid_display[row][col]))
+                display_row.append(Text('·', style='dim'))
         final_display.append(display_row)
-    
-    # Create and return the table
+
     table = Table(show_header=False, box=None, pad_edge=False)
     for _ in range(grid_size):
         table.add_column()
     for row in final_display:
         table.add_row(*row)
-    
     return table
 
