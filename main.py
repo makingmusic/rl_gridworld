@@ -9,24 +9,6 @@ import plots
 from   q_agent       import QLearningAgent
 from   gridworld1d   import GridWorld1D
 
-def isTrainingComplete(qtable):
-    for state, actions in qtable.items():
-        if state == goalState:
-            continue
-        leftValue = float(list(actions.values())[0])
-        rightValue = float(list(actions.values())[1])
-        if rightValue <= leftValue:
-            return False
-    return True
-#end def isTrainingComplete
-
-def isTrainingCompleteByStepCount(stepCounterTable):
-    for row in stepCounterTable.rows:
-        if row.cells[1] == str(grid1DSize-1):
-            return True
-    return False
-#end def isTrainingCompleteByStepCount
-
 # default values for learning parameters
 temperature         = 1.0  # default Initial temperature for softmax exploration
 temperature_decay   = 0.9  # default Multiplicative factor to decay temperature each episode
@@ -39,7 +21,7 @@ epsilon_min         = 0.01  # minimum exploration rate
 
 # Configuration Variables
 num_episodes        = 5000 # number of training episodes
-grid1DSize          = 100 # size of the 1D grid
+grid1DSize          = 10 # size of the 1D grid
 startState          = 0 # starting state
 goalState = (grid1DSize - 1)   # goal state 
 optimization_strategy = "epsilon_greedy" # Options: "epsilon_greedy" or "softmax"

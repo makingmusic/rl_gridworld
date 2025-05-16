@@ -20,10 +20,21 @@ def updateDisplayTableFromQTable(display_table, qtable, max_rows=20):
     # Create a new table
     new_table = Table()
     new_table.add_column("State")
-    new_table.add_column("Up")
-    new_table.add_column("Down")
-    new_table.add_column("Left")
-    new_table.add_column("Right")
+    
+    # Check if this is a 1D or 2D world by looking at the first state's actions
+    first_state = next(iter(qtable.values()))
+    is_2d = 'up' in first_state
+    
+    # Add appropriate columns based on world type
+    if is_2d:
+        new_table.add_column("Up")
+        new_table.add_column("Down")
+        new_table.add_column("Left")
+        new_table.add_column("Right")
+    else:
+        new_table.add_column("Left")
+        new_table.add_column("Right")
+    
     new_table.add_column("Decision")
 
     # Calculate the step size to show only max_rows rows
@@ -41,28 +52,49 @@ def updateDisplayTableFromQTable(display_table, qtable, max_rows=20):
     # Add rows to the new table
     for state in states_to_show:
         actions = qtable[state]
-        upValue = float(actions['up'])
-        downValue = float(actions['down'])
-        leftValue = float(actions['left'])
-        rightValue = float(actions['right'])
         
-        # Find the best action
-        action_values = {'up': upValue, 'down': downValue, 'left': leftValue, 'right': rightValue}
-        best_action = max(action_values.items(), key=lambda x: x[1])
-        
-        # Create decision string
-        if all(v == 0.0 for v in action_values.values()):
-            decision = "stay"
+        if is_2d:
+            upValue = float(actions['up'])
+            downValue = float(actions['down'])
+            leftValue = float(actions['left'])
+            rightValue = float(actions['right'])
+            
+            # Find the best action
+            action_values = {'up': upValue, 'down': downValue, 'left': leftValue, 'right': rightValue}
+            best_action = max(action_values.items(), key=lambda x: x[1])
+            
+            # Create decision string
+            if all(v == 0.0 for v in action_values.values()):
+                decision = "stay"
+            else:
+                decision = f">>{best_action[0]}>>"
+            
+            stateValueStr = str(state)
+            upValueStr = str(round(upValue, 4))
+            downValueStr = str(round(downValue, 4))
+            leftValueStr = str(round(leftValue, 4))
+            rightValueStr = str(round(rightValue, 4))
+            
+            new_table.add_row(stateValueStr, upValueStr, downValueStr, leftValueStr, rightValueStr, decision)
         else:
-            decision = f">>{best_action[0]}>>"
-        
-        stateValueStr = str(state)
-        upValueStr = str(round(upValue, 4))
-        downValueStr = str(round(downValue, 4))
-        leftValueStr = str(round(leftValue, 4))
-        rightValueStr = str(round(rightValue, 4))
-        
-        new_table.add_row(stateValueStr, upValueStr, downValueStr, leftValueStr, rightValueStr, decision)
+            leftValue = float(actions['left'])
+            rightValue = float(actions['right'])
+            
+            # Find the best action
+            action_values = {'left': leftValue, 'right': rightValue}
+            best_action = max(action_values.items(), key=lambda x: x[1])
+            
+            # Create decision string
+            if all(v == 0.0 for v in action_values.values()):
+                decision = "stay"
+            else:
+                decision = f">>{best_action[0]}>>"
+            
+            stateValueStr = str(state)
+            leftValueStr = str(round(leftValue, 4))
+            rightValueStr = str(round(rightValue, 4))
+            
+            new_table.add_row(stateValueStr, leftValueStr, rightValueStr, decision)
     
     return new_table
 #end def updateDisplayTableFromQTable
