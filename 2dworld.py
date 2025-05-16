@@ -25,15 +25,15 @@ epsilon_decay = 0.99
 epsilon_min = 0.01
 
 # Grid Configuration Variables 
-num_episodes = 5000  # number of training episodes
+num_episodes = 10000  # number of training episodes
 grid_size = 5  # size of the 2D grid (grid_size x grid_size)
 start_pos = (0, 0)  # starting position
-goal_pos = (4, 4)  # goal position
+goal_pos = (grid_size-1, grid_size-1)  # goal position
 
 
 # display parameters
 sleep_time = 0   # time to sleep between episodes
-max_rows_in_q_value_table = 25  # Maximum number of rows to display in Q-value table
+max_rows_in_q_value_table = 65  # Maximum number of rows to display in Q-value table
 
 
 # Initialize environment and agent
@@ -148,7 +148,7 @@ plots.plotStepsPerEpisode(plt, episode_data, step_data)
 
 # Plot Q-values for selected states
 states_of_interest = [(0, 0), (1,1),  (2, 2), (4, 4)]  # Example states to plot
-plots.plotQTableValues(plt, qtable_data, states_of_interest)
+#plots.plotQTableValues(plt, qtable_data, states_of_interest)
 
 plt.tight_layout()
 plt.show() 
