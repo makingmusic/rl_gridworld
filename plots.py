@@ -3,166 +3,69 @@ from rich.table    import Table
 from rich.progress import BarColumn, Progress, SpinnerColumn, TextColumn, MofNCompleteColumn, TimeElapsedColumn, TimeRemainingColumn, TaskProgressColumn
 from rich.console  import Group
 from rich.panel    import Panel
+from rich.console import Console
+from rich.text import Text
 
-
-def initDisplayTable():
-    table = Table()
-    table.add_column("State")
-    table.add_column("Left")
-    table.add_column("Right")
-    table.add_column("Decision")
-    return table
-#end def initDisplayTable
-
-def updateDisplayTableFromQTable(display_table, qtable, max_rows=20):
-    # Calculate the step size to show only max_rows rows
-    total_states = len(qtable)
-    if total_states <= max_rows:
-        step_size = 1
-    else:
-        step_size = total_states // max_rows
-        if step_size < 1:
-            step_size = 1
-
-    # Get the states we want to show
-    states_to_show = sorted(qtable.keys())[::step_size]
+def create_grid_display(grid_size, start_pos, goal_pos, qtable):
+    """Create a text-based grid display showing Q-values and decisions."""
+    console = Console()
+    grid_display = []
     
-    # Update existing rows or add new ones if needed
-    for i, state in enumerate(states_to_show):
-        actions = qtable[state]
-        leftValue = float(actions['left'])
-        rightValue = float(actions['right'])
-        decision = "stay" if leftValue == rightValue else ("<<Left<<" if leftValue > rightValue else ">>Right>>")
-        stateValueStr = str(state)
-        leftValueStr = str(round(leftValue, 4))
-        rightValueStr = str(round(rightValue, 4))
-        
-        if i < len(display_table.rows):
-            # Update existing row
-            display_table.columns[0]._cells[i] = stateValueStr
-            display_table.columns[1]._cells[i] = leftValueStr
-            display_table.columns[2]._cells[i] = rightValueStr
-            display_table.columns[3]._cells[i] = decision
-        else:
-            # Add new row if needed
-            display_table.add_row(stateValueStr, leftValueStr, rightValueStr, decision)
-    
-    # If we have more rows than needed, remove the extra ones
-    while len(display_table.rows) > len(states_to_show):
-        display_table.rows.pop()
-    
-    return display_table
-#end def updateDisplayTableFromQTable
-
-def plotQTableValues(matlibplotpointer, qtable_data, state_numbers):
-    # Plot Q-table values
-    # Extract Q-values for specified states across all episodes
-    filtered_episode_data = []
-    
-    # Create a dictionary to store Q-values for each state
-    state_values = {}
-    for state in state_numbers:
-        state_values[state] = {
-            'left': [],
-            'right': []
-        }
-    
-    # Filter out integer values and only process dictionary values
-    for i in range(len(qtable_data)):
-        qtable = qtable_data[i]
-        
-        # Only process dictionary values (Q-tables)
-        if isinstance(qtable, dict):
-            # Add the corresponding episode number
-            filtered_episode_data.append(i // 2)  # Divide by 2 because every other item is an integer
-            
-            # Process each state in the state_numbers array
-            for state in state_numbers:
-                # Check if specified state exists in this Q-table
-                if state in qtable:
-                    state_values[state]['left'].append(qtable[state]['left'])
-                    state_values[state]['right'].append(qtable[state]['right'])
+    # Create the grid
+    for row in range(grid_size):
+        grid_row = []
+        for col in range(grid_size):
+            state = (col, row)
+            if state in qtable:
+                actions = qtable[state]
+                # Find best action
+                action_values = {
+                    'up': actions['up'],
+                    'down': actions['down'],
+                    'left': actions['left'],
+                    'right': actions['right']
+                }
+                best_action = max(action_values.items(), key=lambda x: x[1])
+                
+                # Create cell content
+                if all(v == 0.0 for v in action_values.values()):
+                    cell = "-"
                 else:
-                    # If state doesn't exist in this episode, append 0.0 as default
-                    state_values[state]['left'].append(0.0)
-                    state_values[state]['right'].append(0.0)
+                    # Map actions to arrow symbols
+                    arrows = {
+                        'up': '↑',
+                        'down': '↓',
+                        'left': '←',
+                        'right': '→'
+                    }
+                    cell = arrows[best_action[0]]
+                
+                # Create text with appropriate color
+                text = Text(cell)
+                if state == start_pos:
+                    text.stylize('bold green')
+                elif state == goal_pos:
+                    text.stylize('bold red')
+                grid_row.append(text)
+            else:
+                grid_row.append(Text("-"))
+        grid_display.append(grid_row)
+    
+    return grid_display
 
-    # Create a new figure with larger size
-    matlibplotpointer.figure(figsize=(15, 10))
+def update_grid_display(grid_display, qtable, start_pos, goal_pos):
+    """Update the existing grid display with new Q-values."""
+    console = Console()
     
-    # Define color palette for better differentiation
-    colors = ['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728', '#9467bd', '#8c564b', '#e377c2']
-    
-    # Plot Q-values for each state with improved styling
-    for idx, state in enumerate(state_numbers):
-        color = colors[idx % len(colors)]
-        
-        # Plot left action
-        left_line, = matlibplotpointer.plot(filtered_episode_data, state_values[state]['left'], 
-                                          linestyle='-', color=color, alpha=0.7)
-        # Plot right action
-        right_line, = matlibplotpointer.plot(filtered_episode_data, state_values[state]['right'], 
-                                           linestyle='--', color=color, alpha=0.7)
-        
-        # Add direct labels at the end of each line
-        last_episode = filtered_episode_data[-1]
-        left_value = state_values[state]['left'][-1]
-        right_value = state_values[state]['right'][-1]
-        
-        # Add labels with slight offset for better visibility
-        matlibplotpointer.annotate(f'State {state} Left', 
-                                 xy=(last_episode, left_value),
-                                 xytext=(10, 0), textcoords='offset points',
-                                 va='center', color=color)
-        matlibplotpointer.annotate(f'State {state} Right',
-                                 xy=(last_episode, right_value),
-                                 xytext=(10, 0), textcoords='offset points',
-                                 va='center', color=color)
-    
-    matlibplotpointer.xlabel('Episode', fontsize=12)
-    matlibplotpointer.ylabel('Q-Value', fontsize=12)
-    matlibplotpointer.title('Q-Values Evolution During Training', fontsize=14, pad=20)
-    
-    # Improve grid appearance
-    matlibplotpointer.grid(True, linestyle='--', alpha=0.7)
-    matlibplotpointer.minorticks_on()
-    matlibplotpointer.grid(True, which='minor', linestyle=':', alpha=0.4)
-    
-    # Remove the legend since we're using direct labels
-    # Adjust layout to prevent label cutoff
-    matlibplotpointer.tight_layout()
-# end def plotQTableValues
+    # Create new grid display
+    return create_grid_display(len(grid_display), start_pos, goal_pos, qtable)
 
-def initStepCounterTable():
-    stepCounterTable = Table()
-    stepCounterTable.add_column("Episode", style="bold cyan")
-    stepCounterTable.add_column("Steps Taken", style="bold cyan")
-    return stepCounterTable
-#end def initStepCounterTable
-
-# Function to update step counter
-def updateStepCounter(stepTable, episode, steps):
-    # Check if row exists for this episode
-    existing_row = None
-    for i, row in enumerate(stepTable.rows):
-        if stepTable.columns[0]._cells[i] == str(episode):
-            existing_row = i
-            break
-    
-    if existing_row is not None:
-        # Update existing row
-        stepTable.columns[1]._cells[existing_row] = str(steps)
-    else:
-        # Add new row if episode doesn't exist
-        stepTable.add_row(str(episode), str(steps))
-#end def updateStepCounter
-
-def plotStepsPerEpisode(pltPointer, episode_data, step_data):
+def plotStepsPerEpisode(pltPointer, episode_data, step_data, num_episodes=20):
     pltPointer.figure(figsize=(pltPointer.rcParams['figure.figsize'][0] * 0.8, pltPointer.rcParams['figure.figsize'][1] * 0.8))
     
     # Determine which episodes to display
-    if len(episode_data) <= 20:
-        # If 20 or fewer episodes, show all of them
+    if len(episode_data) <= 2 * num_episodes:
+        # If total episodes is less than or equal to 2*num_episodes, show all of them
         display_episodes = episode_data
         display_steps = step_data
         
@@ -176,32 +79,32 @@ def plotStepsPerEpisode(pltPointer, episode_data, step_data):
                                xytext=(0, 10), textcoords='offset points',
                                ha='center', va='bottom')
     else:
-        # Otherwise, show first 10 and last 10 episodes with a broken axis
-        first_episodes = episode_data[:10]
-        first_steps = step_data[:10]
-        last_episodes = episode_data[-10:]
-        last_steps = step_data[-10:]
+        # Otherwise, show first num_episodes and last num_episodes episodes with a broken axis
+        first_episodes = episode_data[:num_episodes]
+        first_steps = step_data[:num_episodes]
+        last_episodes = episode_data[-num_episodes:]
+        last_steps = step_data[-num_episodes:]
         
         # Create two subplots with a broken axis
         from matplotlib.gridspec import GridSpec
         gs = GridSpec(1, 2, width_ratios=[1, 1], wspace=0.05)
         
-        # First subplot (first 10 episodes)
+        # First subplot (first num_episodes episodes)
         ax1 = pltPointer.subplot(gs[0])
         ax1.plot(first_episodes, first_steps, 'b-', label='Steps')
         
-        # Add labels for first 10 episodes
+        # Add labels for first num_episodes episodes
         for i in range(len(first_episodes)):
             ax1.annotate(f'{first_steps[i]}', 
                         xy=(first_episodes[i], first_steps[i]),
                         xytext=(0, 10), textcoords='offset points',
                         ha='center', va='bottom')
         
-        # Second subplot (last 10 episodes)
+        # Second subplot (last num_episodes episodes)
         ax2 = pltPointer.subplot(gs[1])
         ax2.plot(last_episodes, last_steps, 'b-', label='Steps')
         
-        # Add labels for last 10 episodes
+        # Add labels for last num_episodes episodes
         for i in range(len(last_episodes)):
             ax2.annotate(f'{last_steps[i]}', 
                         xy=(last_episodes[i], last_steps[i]),
@@ -238,10 +141,6 @@ def plotStepsPerEpisode(pltPointer, episode_data, step_data):
         # Hide the right spine of the first subplot and the left spine of the second subplot
         ax1.spines['right'].set_visible(False)
         ax2.spines['left'].set_visible(False)
-        
-        # Adjust layout
-        #pltPointer.tight_layout() #todo: revisit
-# end def plotStepsPerEpisode
 
 def plotEpsilonDecayPerEpisode(pltPointer, episode_data, epsilon_data):
     pltPointer.figure(figsize=(pltPointer.rcParams['figure.figsize'][0] * 0.8, pltPointer.rcParams['figure.figsize'][1] * 0.8))
@@ -250,7 +149,6 @@ def plotEpsilonDecayPerEpisode(pltPointer, episode_data, epsilon_data):
     pltPointer.ylabel('Epsilon')
     pltPointer.title('Epsilon Decay per Episode')
     pltPointer.grid(True)
-# end def plotEpsilonDecayPerEpisode
 
 def plotTemperatureDecayPerEpisode(pltPointer, episode_data, temperature_data):
     pltPointer.figure(figsize=(pltPointer.rcParams['figure.figsize'][0] * 0.8, pltPointer.rcParams['figure.figsize'][1] * 0.8))
@@ -259,5 +157,187 @@ def plotTemperatureDecayPerEpisode(pltPointer, episode_data, temperature_data):
     pltPointer.ylabel('Temperature')
     pltPointer.title('Temperature Decay per Episode')
     pltPointer.grid(True)
-# end def plotTemperatureDecayPerEpisode
+
+def grid_to_table(grid_display):
+    from rich.table import Table
+    table = Table(show_header=False, box=None, pad_edge=False)
+    if not grid_display:
+        return table
+    for _ in range(len(grid_display[0])):
+        table.add_column()
+    for row in grid_display:
+        table.add_row(*row)
+    return table
+
+def display_actual_path(grid_size, start_pos, goal_pos, qtable):
+    """Display the actual path that the model would take from start to goal, with clearer visuals.
+    The path is limited to 2 * grid_size steps to prevent infinite loops."""
+    console = Console()
+    grid_display = []
+    for _ in range(grid_size):
+        grid_display.append(['·'] * grid_size)  # Use middle dot for non-path
+
+    # Start from the start position
+    current_pos = start_pos
+    path = [current_pos]
+    path_arrows = {}
+    max_steps = 5 * grid_size
+    steps_taken = 0
+
+    # Follow the best actions until we reach the goal or hit step limit
+    while current_pos != goal_pos and steps_taken < max_steps:
+        # Check if current position exists in Q-table and has valid actions
+        if current_pos not in qtable or not qtable[current_pos]:
+            break
+            
+        actions = qtable[current_pos]
+        action_values = {
+            'up': actions.get('up', 0.0),
+            'down': actions.get('down', 0.0),
+            'left': actions.get('left', 0.0),
+            'right': actions.get('right', 0.0)
+        }
+        
+        # If all actions have zero value, break the path
+        if all(v == 0.0 for v in action_values.values()):
+            break
+            
+        best_action = max(action_values.items(), key=lambda x: x[1])[0]
+        arrows = {
+            'up': '↑',
+            'down': '↓',
+            'left': '←',
+            'right': '→'
+        }
+        x, y = current_pos
+        path_arrows[(x, y)] = arrows[best_action]
+        if best_action == 'up':
+            current_pos = (x, y - 1)
+        elif best_action == 'down':
+            current_pos = (x, y + 1)
+        elif best_action == 'left':
+            current_pos = (x - 1, y)
+        elif best_action == 'right':
+            current_pos = (x + 1, y)
+        path.append(current_pos)
+        steps_taken += 1
+
+    # Create the final grid display
+    final_display = []
+    for row in range(grid_size):
+        display_row = []
+        for col in range(grid_size):
+            pos = (col, row)
+            if pos == start_pos:
+                display_row.append(Text('S', style='bold green'))
+            elif pos == goal_pos:
+                display_row.append(Text('G', style='bold red'))
+            elif pos in path_arrows:
+                display_row.append(Text(path_arrows[pos], style='bold cyan'))
+            else:
+                display_row.append(Text('·', style='dim'))
+        final_display.append(display_row)
+
+    table = Table(show_header=False, box=None, pad_edge=False)
+    for _ in range(grid_size):
+        table.add_column()
+    for row in final_display:
+        table.add_row(*row)
+    return table
+
+def initDisplayTable():
+    """Initialize the display table for 1D Q-learning visualization."""
+    table = Table(title="Q-Values")
+    table.add_column("State", justify="right", style="cyan")
+    table.add_column("Left", justify="right", style="green")
+    table.add_column("Right", justify="right", style="green")
+    table.add_column("Best Action", justify="center", style="yellow")
+    return table
+
+def updateDisplayTableFromQTable(table, qtable, max_rows=10):
+    """Update the display table with current Q-values."""
+    # Clear existing rows
+    table.rows = []
+    
+    # Add rows for each state
+    for state in range(max_rows):
+        if state in qtable:
+            actions = qtable[state]
+            left_value = f"{actions['left']:.3f}"
+            right_value = f"{actions['right']:.3f}"
+            
+            # Determine best action
+            if actions['left'] > actions['right']:
+                best_action = "←"
+            elif actions['right'] > actions['left']:
+                best_action = "→"
+            else:
+                best_action = "-"
+                
+            table.add_row(str(state), left_value, right_value, best_action)
+        else:
+            table.add_row(str(state), "0.000", "0.000", "-")
+    
+    return table
+
+def display_1d_grid(grid_size, start_pos, goal_pos, qtable):
+    """Display a 1D grid showing the best actions using arrows."""
+    console = Console()
+    grid_display = []
+    
+    # Create the grid row
+    for pos in range(grid_size):
+        if pos in qtable:
+            actions = qtable[pos]
+            # Find best action
+            if actions['left'] > actions['right']:
+                cell = "←"
+            elif actions['right'] > actions['left']:
+                cell = "→"
+            else:
+                cell = "-"
+            
+            # Create text with appropriate color
+            text = Text(cell)
+            if pos == start_pos:
+                text.stylize('bold green')
+            elif pos == goal_pos:
+                text.stylize('bold red')
+            grid_display.append(text)
+        else:
+            grid_display.append(Text("-"))
+    
+    # Create table
+    table = Table(show_header=False, box=None, pad_edge=False)
+    for _ in range(grid_size):
+        table.add_column()
+    table.add_row(*grid_display)
+    return table
+
+def plotQTableValues(pltPointer, qtable_data, states_of_interest):
+    """Plot Q-values for specific states over episodes."""
+    pltPointer.figure(figsize=(pltPointer.rcParams['figure.figsize'][0] * 0.8, pltPointer.rcParams['figure.figsize'][1] * 0.8))
+    
+    # Create a plot for each state of interest
+    for state in states_of_interest:
+        # Extract Q-values for this state over episodes
+        left_values = []
+        right_values = []
+        episodes = []
+        
+        for episode, qtable in enumerate(qtable_data):
+            if isinstance(qtable, dict) and state in qtable:
+                left_values.append(qtable[state]['left'])
+                right_values.append(qtable[state]['right'])
+                episodes.append(episode)
+        
+        if episodes:  # Only plot if we have data for this state
+            pltPointer.plot(episodes, left_values, 'b-', label=f'State {state} Left')
+            pltPointer.plot(episodes, right_values, 'r-', label=f'State {state} Right')
+    
+    pltPointer.xlabel('Episode')
+    pltPointer.ylabel('Q-Value')
+    pltPointer.title('Q-Values Over Time')
+    pltPointer.legend()
+    pltPointer.grid(True)
 
