@@ -2,6 +2,25 @@
 
 This is a Reinforcement Learning implementation of Q-Learning in both 1D and 2D gridworld environments. Why you ask? Well, the reason is learn. Like really learn what is going on underneath.
 
+## Quick Start
+
+To get started immediately, simply run this command in your terminal:
+
+```bash
+curl -sSL https://raw.githubusercontent.com/makingmusic/rl_gridworld/main/run.sh | bash
+```
+
+This will:
+
+1. Set up a Python virtual environment
+2. Install all required dependencies
+3. Provide you with the commands to run either the 1D or 2D grid world examples
+
+After installation, you can run either:
+
+- `python 1dworld.py` for the 1D grid world
+- `python 2dworld.py` for the 2D grid world
+
 I did learn a ton and I find it much more useful to learn through this method than reading a book. It is the reason I am keeping this repo public. May more people find this usefulness!
 
 ## The Setup
@@ -135,8 +154,8 @@ Future:
    • Reward Noise: Add variability to rewards to study robustness.
 
 5. Visualize Learning Progress
-   • Heatmaps of State-Value Functions: Visualize how the agent’s understanding of the environment evolves.
-   • Policy Arrows: Display the agent’s preferred action in each state.
+   • Heatmaps of State-Value Functions: Visualize how the agent's understanding of the environment evolves.
+   • Policy Arrows: Display the agent's preferred action in each state.
 
 ## Requirements / Installation etc...
 
