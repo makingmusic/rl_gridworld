@@ -181,7 +181,7 @@ def display_actual_path(grid_size, start_pos, goal_pos, qtable):
     current_pos = start_pos
     path = [current_pos]
     path_arrows = {}
-    max_steps = 2 * grid_size
+    max_steps = 5 * grid_size
     steps_taken = 0
 
     # Follow the best actions until we reach the goal or hit step limit
