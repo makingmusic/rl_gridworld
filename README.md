@@ -130,7 +130,7 @@ Future:
 - allow "jumps", which may be X number of steps that can be taken together. Would be fun to see
   how learning improves (or becomes worse) by higher values of X.
 - Add obstacles or forbidden states so the only way to reach the end would be jump over them.
-- Changing the tradeoffs between exploitation vs exploration. There are many algorithsm avaiable
+- Changing the tradeoffs between exploitation vs exploration. There are many algorithms available
   include the infamous softmax that are used in modern LLMs too. I want to get there.
 
 ## GPT Says I should try the following:
