@@ -1,6 +1,6 @@
 # RL Gridworld
 
-This is a Reinforcement Learning implementation of Q-Learning in both 1D and 2D gridworld environments. Why you ask? Well, the reason is learn. Like really learn what is going on underneath.
+This is a Reinforcement Learning implementation of Q-Learning in both 1D and 2D gridworld environments. Why you ask? Well, the reason is to learn. Like really learn what is going on underneath.
 
 ## Quick Start
 
