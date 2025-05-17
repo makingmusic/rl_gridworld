@@ -24,13 +24,13 @@ epsilon_min = 0.01
 
 # Grid Configuration Variables 
 num_episodes = 1000  # number of training episodes
-grid_size = 20  # size of the 2D grid (grid_size x grid_size)
+grid_size = 40  # size of the 2D grid (grid_size x grid_size)
 start_pos = (0, 0)  # starting position
 goal_pos = (grid_size-1, grid_size-1)  # goal position
 
 
 # display parameters
-sleep_time = 0   # time to sleep between episodes
+sleep_time = 0  # time to sleep between episodes
 
 
 # Initialize environment and agent
@@ -50,6 +50,7 @@ episode_data = []
 step_data = []
 epsilon_data = []
 qtable_data = []
+last_ten_steps = [0] * 10  # Store steps from last 10 episodes
 
 # Initialize the progress bars
 progress = Progress(
@@ -74,12 +75,23 @@ posProgressBar = Progress(
 )
 posTask = posProgressBar.add_task("Position tracking", total=grid_size * grid_size - 1)
 
+# Add steps progress bar
+stepsProgressBar = Progress(
+    SpinnerColumn(),
+    TextColumn("Steps in last 10 episodes:"),
+    TextColumn("[bold blue]{task.description}"),
+    TextColumn(" | Current:"),
+    TextColumn("[bold green]{task.fields[current_steps]}"),
+    transient=True
+)
+stepsTask = stepsProgressBar.add_task("Steps tracking", total=0, current_steps=0)
+
 # Initialize grid display
 grid_display = plots.create_grid_display(grid_size, start_pos, goal_pos, agent.getQTable())
 path_display = plots.display_actual_path(grid_size, start_pos, goal_pos, agent.getQTable())
 
 # Create display group with progress bars first
-display_group = Group(progress, posProgressBar)
+display_group = Group(progress, posProgressBar, stepsProgressBar)
 
 with Live(display_group, refresh_per_second=50) as live:
     # Training loop
@@ -102,12 +114,16 @@ with Live(display_group, refresh_per_second=50) as live:
             pos_value = current_pos[0] * grid_size + current_pos[1]
             posProgressBar.update(posTask, completed=pos_value)
             
+            # Update steps progress bar
+            steps_str = " | ".join(str(steps) for steps in last_ten_steps)
+            stepsProgressBar.update(stepsTask, description=steps_str, current_steps=step_count)
+            
             # Update grid display and show it after progress bars
             grid_display = plots.update_grid_display(grid_display, agent.getQTable(), start_pos, goal_pos)
             grid_table = plots.grid_to_table(grid_display)
             path_display = plots.display_actual_path(grid_size, start_pos, goal_pos, agent.getQTable())
             from rich.panel import Panel
-            display_group = Group(progress, posProgressBar, 
+            display_group = Group(progress, posProgressBar, stepsProgressBar,
                                   Panel(grid_table, title="Grid"),
                                   Panel(path_display, title="Current Best Path"))
             live.update(display_group)
@@ -116,6 +132,10 @@ with Live(display_group, refresh_per_second=50) as live:
         episode_data.append(episode)
         step_data.append(step_count)
         epsilon_data.append(agent.epsilon)
+        
+        # Update last ten steps
+        last_ten_steps.pop(0)  # Remove oldest step count
+        last_ten_steps.append(step_count)  # Add current step count
 
         # Get the Q-table for this episode
         qtable = agent.getQTable()
@@ -151,8 +171,7 @@ console = Console()
 console.print("\nActual path taken by the model:")
 console.print(Panel(path_table, title="Path"))
 
-# Plot steps per episode
+# Plot steps per episode : Uncomment this section to see the steps per episode
 #plots.plotStepsPerEpisode(plt, episode_data, step_data)
-
 #plt.tight_layout()
 #plt.show() 

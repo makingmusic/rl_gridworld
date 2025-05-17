@@ -20,14 +20,14 @@ epsilon_decay       = 0.95  # decay rate for exploration
 epsilon_min         = 0.01  # minimum exploration rate
 
 # Configuration Variables
-num_episodes        = 1000 # number of training episodes
-grid1DSize          = 50 # size of the 1D grid
+num_episodes        = 100 # number of training episodes
+grid1DSize          = 10 # size of the 1D grid
 startState          = 0 # starting state
 goalState = (grid1DSize - 1)   # goal state 
 optimization_strategy = "epsilon_greedy" # Options: "epsilon_greedy" or "softmax"
 
 # display parameters
-sleep_time = 0.1 # time to sleep between episodes
+sleep_time = 5 # time to sleep between episodes
 
 if (optimization_strategy == "softmax"):
     # Softmax parameters

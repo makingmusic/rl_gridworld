@@ -104,7 +104,7 @@ class GridWorld2D:
         if next_pos == self.end_pos:
             reward = 1.0  # reached goal
         else:
-            reward = -0.01  # small negative reward for each step to encourage efficiency
+            reward = -0.005  # small negative reward for each step to encourage efficiency
         
         # Check if episode is done
         done = (next_pos == self.end_pos)

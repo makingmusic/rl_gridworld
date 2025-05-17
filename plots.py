@@ -48,7 +48,7 @@ def create_grid_display(grid_size, start_pos, goal_pos, qtable):
                     text.stylize('bold red')
                 grid_row.append(text)
             else:
-                grid_row.append(Text("-"))
+                grid_row.append(Text("□"))
         grid_display.append(grid_row)
     
     return grid_display
