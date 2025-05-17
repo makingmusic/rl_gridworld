@@ -24,7 +24,7 @@ epsilon_min = 0.01
 
 # Grid Configuration Variables 
 num_episodes = 1000  # number of training episodes
-grid_size = 15  # size of the 2D grid (grid_size x grid_size)
+grid_size = 20  # size of the 2D grid (grid_size x grid_size)
 start_pos = (0, 0)  # starting position
 goal_pos = (grid_size-1, grid_size-1)  # goal position
 
@@ -152,7 +152,7 @@ console.print("\nActual path taken by the model:")
 console.print(Panel(path_table, title="Path"))
 
 # Plot steps per episode
-plots.plotStepsPerEpisode(plt, episode_data, step_data)
+#plots.plotStepsPerEpisode(plt, episode_data, step_data)
 
-plt.tight_layout()
-plt.show() 
+#plt.tight_layout()
+#plt.show() 
