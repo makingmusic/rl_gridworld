@@ -24,8 +24,8 @@ epsilon_min = 0.01
 
 # Grid Configuration Variables 
 num_episodes = 1000  # number of training episodes
-grid_size = 20  # size of the 2D grid (grid_size x grid_size)
-start_pos = (10, 10)  # starting position
+grid_size = 15  # size of the 2D grid (grid_size x grid_size)
+start_pos = (0, 0)  # starting position
 goal_pos = (grid_size-1, grid_size-1)  # goal position
 
 
@@ -76,6 +76,7 @@ posTask = posProgressBar.add_task("Position tracking", total=grid_size * grid_si
 
 # Initialize grid display
 grid_display = plots.create_grid_display(grid_size, start_pos, goal_pos, agent.getQTable())
+path_display = plots.display_actual_path(grid_size, start_pos, goal_pos, agent.getQTable())
 
 # Create display group with progress bars first
 display_group = Group(progress, posProgressBar)
@@ -104,8 +105,11 @@ with Live(display_group, refresh_per_second=50) as live:
             # Update grid display and show it after progress bars
             grid_display = plots.update_grid_display(grid_display, agent.getQTable(), start_pos, goal_pos)
             grid_table = plots.grid_to_table(grid_display)
+            path_display = plots.display_actual_path(grid_size, start_pos, goal_pos, agent.getQTable())
             from rich.panel import Panel
-            display_group = Group(progress, posProgressBar, Panel(grid_table, title="Grid"))
+            display_group = Group(progress, posProgressBar, 
+                                  Panel(grid_table, title="Grid"),
+                                  Panel(path_display, title="Current Best Path"))
             live.update(display_group)
 
         # Store episode and step data

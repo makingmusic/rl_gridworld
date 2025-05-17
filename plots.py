@@ -170,7 +170,8 @@ def grid_to_table(grid_display):
     return table
 
 def display_actual_path(grid_size, start_pos, goal_pos, qtable):
-    """Display the actual path that the model would take from start to goal, with clearer visuals."""
+    """Display the actual path that the model would take from start to goal, with clearer visuals.
+    The path is limited to 2 * grid_size steps to prevent infinite loops."""
     console = Console()
     grid_display = []
     for _ in range(grid_size):
@@ -180,16 +181,27 @@ def display_actual_path(grid_size, start_pos, goal_pos, qtable):
     current_pos = start_pos
     path = [current_pos]
     path_arrows = {}
+    max_steps = 2 * grid_size
+    steps_taken = 0
 
-    # Follow the best actions until we reach the goal
-    while current_pos != goal_pos:
+    # Follow the best actions until we reach the goal or hit step limit
+    while current_pos != goal_pos and steps_taken < max_steps:
+        # Check if current position exists in Q-table and has valid actions
+        if current_pos not in qtable or not qtable[current_pos]:
+            break
+            
         actions = qtable[current_pos]
         action_values = {
-            'up': actions['up'],
-            'down': actions['down'],
-            'left': actions['left'],
-            'right': actions['right']
+            'up': actions.get('up', 0.0),
+            'down': actions.get('down', 0.0),
+            'left': actions.get('left', 0.0),
+            'right': actions.get('right', 0.0)
         }
+        
+        # If all actions have zero value, break the path
+        if all(v == 0.0 for v in action_values.values()):
+            break
+            
         best_action = max(action_values.items(), key=lambda x: x[1])[0]
         arrows = {
             'up': '↑',
@@ -208,6 +220,7 @@ def display_actual_path(grid_size, start_pos, goal_pos, qtable):
         elif best_action == 'right':
             current_pos = (x + 1, y)
         path.append(current_pos)
+        steps_taken += 1
 
     # Create the final grid display
     final_display = []
