@@ -6,15 +6,15 @@ from rich.panel    import Panel
 from rich.console import Console
 from rich.text import Text
 
-def create_grid_display(grid_size, start_pos, goal_pos, qtable):
+def create_grid_display(grid_size_x, grid_size_y, start_pos, goal_pos, qtable):
     """Create a text-based grid display showing Q-values and decisions."""
     console = Console()
     grid_display = []
     
     # Create the grid
-    for row in range(grid_size):
+    for row in range(grid_size_y):
         grid_row = []
-        for col in range(grid_size):
+        for col in range(grid_size_x):
             state = (col, row)
             if state in qtable:
                 actions = qtable[state]
@@ -58,7 +58,7 @@ def update_grid_display(grid_display, qtable, start_pos, goal_pos):
     console = Console()
     
     # Create new grid display
-    return create_grid_display(len(grid_display), start_pos, goal_pos, qtable)
+    return create_grid_display(len(grid_display[0]), len(grid_display), start_pos, goal_pos, qtable)
 
 def plotStepsPerEpisode(pltPointer, episode_data, step_data, num_episodes=20):
     pltPointer.figure(figsize=(pltPointer.rcParams['figure.figsize'][0] * 0.8, pltPointer.rcParams['figure.figsize'][1] * 0.8))
@@ -169,19 +169,19 @@ def grid_to_table(grid_display):
         table.add_row(*row)
     return table
 
-def display_actual_path(grid_size, start_pos, goal_pos, qtable):
+def display_actual_path(grid_size_x, grid_size_y, start_pos, goal_pos, qtable):
     """Display the actual path that the model would take from start to goal, with clearer visuals.
-    The path is limited to 2 * grid_size steps to prevent infinite loops."""
+    The path is limited to 2 * (grid_size_x + grid_size_y) steps to prevent infinite loops."""
     console = Console()
     grid_display = []
-    for _ in range(grid_size):
-        grid_display.append(['·'] * grid_size)  # Use middle dot for non-path
+    for _ in range(grid_size_y):
+        grid_display.append(['·'] * grid_size_x)  # Use middle dot for non-path
 
     # Start from the start position
     current_pos = start_pos
     path = [current_pos]
     path_arrows = {}
-    max_steps = 5 * grid_size
+    max_steps = 5 * (grid_size_x + grid_size_y)  # Adjusted for rectangular grid
     steps_taken = 0
 
     # Follow the best actions until we reach the goal or hit step limit
@@ -224,9 +224,9 @@ def display_actual_path(grid_size, start_pos, goal_pos, qtable):
 
     # Create the final grid display
     final_display = []
-    for row in range(grid_size):
+    for row in range(grid_size_y):
         display_row = []
-        for col in range(grid_size):
+        for col in range(grid_size_x):
             pos = (col, row)
             if pos == start_pos:
                 display_row.append(Text('S', style='bold green'))
@@ -242,7 +242,7 @@ def display_actual_path(grid_size, start_pos, goal_pos, qtable):
     final_display.reverse()
 
     table = Table(show_header=False, box=None, pad_edge=False)
-    for _ in range(grid_size):
+    for _ in range(grid_size_x):
         table.add_column()
     for row in final_display:
         table.add_row(*row)

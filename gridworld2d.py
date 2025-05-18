@@ -1,17 +1,19 @@
 import numpy as np
 
 class GridWorld2D:
-    def __init__(self, grid_size=5, start_pos=(0, 0), end_pos=(4, 4)):
+    def __init__(self, grid_size_x=5, grid_size_y=5, start_pos=(0, 0), end_pos=(4, 4)):
         """
         Initialize a 2D gridworld environment.
         
         Args:
-            grid_size (int): Size of the grid (grid_size x grid_size). Default is 5.
+            grid_size_x (int): Width of the grid. Default is 5.
+            grid_size_y (int): Height of the grid. Default is 5.
             start_pos (tuple): Starting position coordinates (x, y). Default is (0, 0).
             end_pos (tuple): Goal position coordinates (x, y). Default is (4, 4).
             Note: (0,0) is at the bottom left, with x increasing right and y increasing up.
         """
-        self.grid_size = grid_size
+        self.grid_size_x = grid_size_x
+        self.grid_size_y = grid_size_y
         self.start_pos = start_pos
         self.end_pos = end_pos
         self.current_pos = start_pos
@@ -34,8 +36,8 @@ class GridWorld2D:
             ValueError: If position is outside grid boundaries
         """
         x, y = pos
-        if not (0 <= x < self.grid_size and 0 <= y < self.grid_size):
-            raise ValueError(f"Position {pos} is outside grid boundaries (0 to {self.grid_size-1})")
+        if not (0 <= x < self.grid_size_x and 0 <= y < self.grid_size_y):
+            raise ValueError(f"Position {pos} is outside grid boundaries (x: 0 to {self.grid_size_x-1}, y: 0 to {self.grid_size_y-1})")
     
     def reset(self):
         """
@@ -120,7 +122,7 @@ class GridWorld2D:
         Returns:
             str: String representation of the grid
         """
-        grid = [['.' for _ in range(self.grid_size)] for _ in range(self.grid_size)]
+        grid = [['.' for _ in range(self.grid_size_x)] for _ in range(self.grid_size_y)]
         
         # Mark start position
         x, y = self.start_pos

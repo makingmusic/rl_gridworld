@@ -23,10 +23,11 @@ epsilon_decay = 0.99
 epsilon_min = 0.01
 
 # Grid Configuration Variables 
-num_episodes = 1000  # number of training episodes
-grid_size = 9  # size of the 2D grid (grid_size x grid_size)
+num_episodes = 500  # number of training episodes
+grid_size_x = 20  # width of the 2D grid
+grid_size_y = 1  # height of the 2D grid
 start_pos = (0, 0)  # starting position at bottom left
-goal_pos = (grid_size-1, grid_size-1)  # goal position at top right
+goal_pos = (grid_size_x-1, grid_size_y-1)  # goal position at top right
 
 
 # display parameters
@@ -34,7 +35,7 @@ sleep_time = 0  # time to sleep between episodes
 
 
 # Initialize environment and agent
-env = GridWorld2D(grid_size=grid_size, start_pos=start_pos, end_pos=goal_pos)
+env = GridWorld2D(grid_size_x=grid_size_x, grid_size_y=grid_size_y, start_pos=start_pos, end_pos=goal_pos)
 agent = QLearningAgent2D(
     actions=["up", "down", "left", "right"],
     learning_rate=learning_rate,
@@ -73,7 +74,7 @@ posProgressBar = Progress(
     MofNCompleteColumn(),
     transient=True
 )
-posTask = posProgressBar.add_task("Position tracking", total=grid_size * grid_size - 1)
+posTask = posProgressBar.add_task("Position tracking", total=grid_size_x * grid_size_y - 1)
 
 # Add steps progress bar
 stepsProgressBar = Progress(
@@ -87,8 +88,8 @@ stepsProgressBar = Progress(
 stepsTask = stepsProgressBar.add_task("Steps tracking", total=0, current_steps=0)
 
 # Initialize grid display
-grid_display = plots.create_grid_display(grid_size, start_pos, goal_pos, agent.getQTable())
-path_display = plots.display_actual_path(grid_size, start_pos, goal_pos, agent.getQTable())
+grid_display = plots.create_grid_display(grid_size_x, grid_size_y, start_pos, goal_pos, agent.getQTable())
+path_display = plots.display_actual_path(grid_size_x, grid_size_y, start_pos, goal_pos, agent.getQTable())
 
 # Create display group with progress bars first
 display_group = Group(progress, posProgressBar, stepsProgressBar)
@@ -111,7 +112,7 @@ with Live(display_group, refresh_per_second=50) as live:
 
             # Update position progress bar
             current_pos = env.get_state()
-            pos_value = current_pos[0] * grid_size + current_pos[1]
+            pos_value = current_pos[0] * grid_size_y + current_pos[1]
             posProgressBar.update(posTask, completed=pos_value)
             
             # Update steps progress bar
@@ -121,7 +122,7 @@ with Live(display_group, refresh_per_second=50) as live:
             # Update grid display and show it after progress bars
             grid_display = plots.update_grid_display(grid_display, agent.getQTable(), start_pos, goal_pos)
             grid_table = plots.grid_to_table(grid_display)
-            path_display = plots.display_actual_path(grid_size, start_pos, goal_pos, agent.getQTable())
+            path_display = plots.display_actual_path(grid_size_x, grid_size_y, start_pos, goal_pos, agent.getQTable())
             from rich.panel import Panel
             display_group = Group(progress, posProgressBar, stepsProgressBar,
                                   Panel(grid_table, title="Grid"),
@@ -166,7 +167,7 @@ live.update(display_group)
 print(f"Training completed in {end_time - start_time:.2f} seconds")
 
 # Display the actual path taken by the model
-path_table = plots.display_actual_path(grid_size, start_pos, goal_pos, agent.getQTable())
+path_table = plots.display_actual_path(grid_size_x, grid_size_y, start_pos, goal_pos, agent.getQTable())
 console = Console()
 console.print("\nActual path taken by the model:")
 console.print(Panel(path_table, title="Path"))
