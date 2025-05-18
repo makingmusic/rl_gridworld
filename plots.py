@@ -212,9 +212,9 @@ def display_actual_path(grid_size, start_pos, goal_pos, qtable):
         x, y = current_pos
         path_arrows[(x, y)] = arrows[best_action]
         if best_action == 'up':
-            current_pos = (x, y - 1)
+            current_pos = (x, y + 1)  # y increases up
         elif best_action == 'down':
-            current_pos = (x, y + 1)
+            current_pos = (x, y - 1)  # y decreases down
         elif best_action == 'left':
             current_pos = (x - 1, y)
         elif best_action == 'right':
@@ -237,6 +237,9 @@ def display_actual_path(grid_size, start_pos, goal_pos, qtable):
             else:
                 display_row.append(Text('·', style='dim'))
         final_display.append(display_row)
+
+    # Reverse the display to show (0,0) at bottom
+    final_display.reverse()
 
     table = Table(show_header=False, box=None, pad_edge=False)
     for _ in range(grid_size):

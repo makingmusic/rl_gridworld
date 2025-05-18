@@ -9,6 +9,7 @@ class GridWorld2D:
             grid_size (int): Size of the grid (grid_size x grid_size). Default is 5.
             start_pos (tuple): Starting position coordinates (x, y). Default is (0, 0).
             end_pos (tuple): Goal position coordinates (x, y). Default is (4, 4).
+            Note: (0,0) is at the bottom left, with x increasing right and y increasing up.
         """
         self.grid_size = grid_size
         self.start_pos = start_pos
@@ -84,9 +85,9 @@ class GridWorld2D:
         
         # Calculate next position based on action
         if action == 'up':
-            next_pos = (x, y - 1)
+            next_pos = (x, y + 1)  # y increases up
         elif action == 'down':
-            next_pos = (x, y + 1)
+            next_pos = (x, y - 1)  # y decreases down
         elif action == 'left':
             next_pos = (x - 1, y)
         elif action == 'right':
@@ -114,6 +115,7 @@ class GridWorld2D:
     def render(self):
         """
         Visualize the current state of the gridworld.
+        The grid is displayed with (0,0) at the bottom left.
         
         Returns:
             str: String representation of the grid
@@ -122,17 +124,17 @@ class GridWorld2D:
         
         # Mark start position
         x, y = self.start_pos
-        grid[y][x] = 'S'
+        grid[y][x] = 'S'  # y is already in the correct orientation
         
         # Mark end position
         x, y = self.end_pos
-        grid[y][x] = 'G'
+        grid[y][x] = 'G'  # y is already in the correct orientation
         
         # Mark current position
         x, y = self.current_pos
         if grid[y][x] not in ['S', 'G']:  # Don't overwrite start or goal
             grid[y][x] = 'A'
         
-        # Convert grid to string representation
-        grid_str = '\n'.join([' '.join(row) for row in grid])
+        # Convert grid to string representation, reversing the rows to show (0,0) at bottom
+        grid_str = '\n'.join([' '.join(row) for row in reversed(grid)])
         return grid_str
