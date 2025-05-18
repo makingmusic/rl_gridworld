@@ -6,28 +6,39 @@ from rich.console import Group, Console
 import plots
 from q_agent2D import QLearningAgent2D
 from gridworld2d import GridWorld2D
+import wandb
 
+# Initialize wandb
+wandb.init(
+    project="gridworld-rl",
+    config={
+        "learning_rate": 0.1,
+        "discount_factor": 0.99,
+        "epsilon": 1.0,
+        "epsilon_min": 0.01,
+        "grid_size": 50,
+        "num_episodes": 10000,
+        "exploration_strategy": "epsilon_greedy"
+    }
+)
+
+# Calculate epsilon decay rate to reach epsilon_min at the last episode
+epsilon_decay = (wandb.config.epsilon_min / wandb.config.epsilon) ** (1 / (wandb.config.num_episodes - 1))
+wandb.config.epsilon_decay = epsilon_decay
 
 # default values for learning parameters
-learning_rate = 0.1  # learning rate for Q-value updates
-discount_factor = 0.99  # discount factor for future rewards
-epsilon = 1.0  # initial exploration rate
-epsilon_decay = 0.95  # decay rate for exploration
-epsilon_min = 0.01  # minimum exploration rate
-# Epsilon-greedy parameters
-exploration_strategy = "epsilon_greedy"
-learning_rate = 0.1
-discount_factor = 0.99
-epsilon = 1.0
-epsilon_decay = 0.99
-epsilon_min = 0.01
+learning_rate = wandb.config.learning_rate
+discount_factor = wandb.config.discount_factor
+epsilon = wandb.config.epsilon
+epsilon_decay = wandb.config.epsilon_decay
+epsilon_min = wandb.config.epsilon_min
+exploration_strategy = wandb.config.exploration_strategy
 
 # Grid Configuration Variables 
-num_episodes = 1000  # number of training episodes
-grid_size = 10  # size of the 2D grid (grid_size x grid_size)
-start_pos = (0, 0)  # starting position
-goal_pos = (grid_size-1, grid_size-1)  # goal position
-
+num_episodes = wandb.config.num_episodes
+grid_size = wandb.config.grid_size
+start_pos = (0, 0)
+goal_pos = (grid_size-1, grid_size-1)
 
 # display parameters
 sleep_time = 0  # time to sleep between episodes
@@ -101,6 +112,7 @@ with Live(display_group, refresh_per_second=50) as live:
         state = env.reset()
         done = False
         step_count = 0
+        episode_reward = 0
 
         while not done:
             action = agent.choose_action(state)
@@ -108,6 +120,7 @@ with Live(display_group, refresh_per_second=50) as live:
             agent.update_q_value(state, action, reward, next_state, done)
             state = next_state
             step_count += 1
+            episode_reward += reward
 
             # Update position progress bar
             current_pos = env.get_state()
@@ -128,14 +141,23 @@ with Live(display_group, refresh_per_second=50) as live:
                                   Panel(path_display, title="Current Best Path"))
             live.update(display_group)
 
+        # Log metrics to wandb
+        wandb.log({
+            "episode": episode,
+            "steps": step_count,
+            "reward": episode_reward,
+            "epsilon": agent.epsilon,
+            "average_steps_last_10": sum(last_ten_steps) / len(last_ten_steps)
+        })
+
         # Store episode and step data
         episode_data.append(episode)
         step_data.append(step_count)
         epsilon_data.append(agent.epsilon)
         
         # Update last ten steps
-        last_ten_steps.pop(0)  # Remove oldest step count
-        last_ten_steps.append(step_count)  # Add current step count
+        last_ten_steps.pop(0)
+        last_ten_steps.append(step_count)
 
         # Get the Q-table for this episode
         qtable = agent.getQTable()
@@ -170,6 +192,9 @@ path_table = plots.display_actual_path(grid_size, start_pos, goal_pos, agent.get
 console = Console()
 console.print("\nActual path taken by the model:")
 console.print(Panel(path_table, title="Path"))
+
+# Close wandb run
+wandb.finish()
 
 # Plot steps per episode : Uncomment this section to see the steps per episode
 #plots.plotStepsPerEpisode(plt, episode_data, step_data)

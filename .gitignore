@@ -2,6 +2,7 @@
 __pycache__/
 myenv/
 .venv/
+wandb/
 *.py[cod]
 *$py.class
 *.so
