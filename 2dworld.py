@@ -25,8 +25,8 @@ epsilon_min = 0.01
 # Grid Configuration Variables 
 num_episodes = 1000  # number of training episodes
 grid_size = 10  # size of the 2D grid (grid_size x grid_size)
-start_pos = (0, 0)  # starting position
-goal_pos = (grid_size-1, grid_size-1)  # goal position
+start_pos = (0, 0)  # starting position at bottom left
+goal_pos = (grid_size-1, grid_size-1)  # goal position at top right
 
 
 # display parameters
