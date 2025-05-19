@@ -14,71 +14,60 @@ This will:
 
 1. Set up a Python virtual environment
 2. Install all required dependencies
-3. Provide you with the commands to run either the 1D or 2D grid world examples
+3. Provide you with the command to run the 1D/2D grid world example
 
-After installation, you can run either:
+After installation, you can run:
 
-- `python 1dworld.py` for the 1D grid world
-- `python 2dworld.py` for the 2D grid world
+- `python main.py` for the 2D grid world
 
-I did learn a ton and I find it much more useful to learn through this method than reading a book. It is the reason I am keeping this repo public. May more people find this usefulness!
-
-## The Setup
-
-The project includes two different environments:
-
-### 1D Gridworld
-
-A simple 1D world where the agent can move left or right. The goal is to reach state N.
-
-Rules are simple: You can either go left or right (falling out at the edges not ok :) - obviously).
+## The Environment
 
 ### 2D Gridworld
 
-A more complex 2D world where the agent can move up, down, left, or right. The goal is to reach the bottom-right corner.
+A 1D/2D world where the agent can move up, down, left, or right. The goal is to reach the top-right corner. If it is setup with just one row, then it can simulate a 1D world.
 
 Rules:
 
 - Agent can move in four directions: up, down, left, right
 - Cannot move outside the grid boundaries
-- Goal state is at the bottom-right corner (N-1, N-1)
+- Goal state is at the top-right corner (grid_size_x-1, grid_size_y-1)
+- Default grid size is 20x5
 
-## The agent
+## The Agent
 
-It keeps a python list against each state. This list contains a dict with two items:
+The agent implements Q-Learning with the following features:
 
-1. left
-2. right
-   Both of these are numbers that are the "expected reward" on taking that action. The agent takes the action that has the greatest reward.
+1. **Epsilon-greedy Exploration Strategy**:
 
-Well, if only life was so simple. It is not.
-The agent supports two exploration strategies:
+   - Starts with high exploration (epsilon = 1.0)
+   - Gradually reduces exploration through epsilon decay
+   - Minimum exploration rate of 0.01 to ensure continuous learning
 
-Approach one is "Epsilon-greedy"
-For reasons known as "epsilon-greedy learning", the agent doesn't just take the higher reward of the two. Instead it generates a random number between 0 and 1 and if the number is < epsilon, then it will chose a random action out of left or right. Otherwise it will chose the larger of the two options. (Search for the text "xplore or exploit" in the function choose_action in the file q_agent.py).
+2. **Q-Value Updates**:
+   - Learning rate: 0.1
+   - Discount factor: 0.99
+   - Updates Q-values based on rewards and next state values
 
-Now if the world was so simple, it would be awesome. It is not. epsilon, it turns out starts at a high value (0.95) and slowly reduces down to 0.01 in small increments. This means that it will nearly always random in the beginning and will lean on the learnt data as it progresses. Makes sense, doesn't it ?
+## Real-time Visualization
 
-The cool thing I like about my default values is that it NEVER STOPS LEARNING. See how the learning parameters are setup in main.py by searching for the text "Configuration Variables"
-Now there is also an implementation for "softmax"
+The project includes rich-based real-time visualizations:
 
-- Actions are selected based on their Q-values using the softmax function
-- Temperature parameter controls exploration (high = more random, low = more greedy)
-- Temperature decays over time from 1.0 to 0.1
+1. **Progress Tracking**:
 
-# Why is there so much code?
+   - Training progress bar
+   - Current position tracking
+   - Steps in last 10 episodes
 
-The real deal is in main.py in the for loop annotated as the "# Training loop". That's it. It is a super small implementation, made a bit more readable by the use of classes for the environment (grid1Dworld.py) and the agent (q_agent.py).
+2. **Grid Display**:
 
-Nearly half of the code in main.py (and 100% of the code in plots.py) is for me to really understand what is happenning inside by plotting the changing data in curves and by displaying the changing q-values in the command line. Everything that has to do with the python module "rich" and "matlabplot" is merely to show me things. It has nothing to do with the real work being carried out.
+   - Real-time Q-value visualization
+   - Current best path display
+   - Agent position tracking
 
-## Display choices
-
-- There is a table that shows the Q-values against each state, action tuple and it is updated on the fly at the end of every episode.
-- To really see this table changing and the values converging, you will need to add some non-zero sleep in the variable "sleep_time" in main.py
-- At the end, it will show the Q-values for every 5th state in a nice little matlab plot.
-- It will also show the decline of number of steps required in each episode. It is fun to watch the required number of steps go down drastically after the first few episodes.
-- Uncomment code under "# Plot epsilon decay" in main.py to see the epsilon values decline. It is stating the obvious - no surprise there.
+3. **Learning Metrics**:
+   - Steps per episode tracking
+   - Epsilon decay visualization
+   - Q-table evolution
 
 ## Configuration
 
@@ -86,38 +75,23 @@ You can modify the following parameters in `main.py`:
 
 ### Environment Parameters
 
-- `grid1DSize`: Size of the 1D grid (default: 100)
-- `startState`: Starting position (default: 0)
-- `goalState`: Goal position (default: grid1DSize - 1)
+- `grid_size_x`: Width of the 2D grid (default: 20)
+- `grid_size_y`: Height of the 2D grid (default: 5)
+- `start_pos`: Starting position (default: (0, 0))
+- `goal_pos`: Goal position (default: (grid_size_x-1, grid_size_y-1))
 
 ### Training Parameters
 
-- `num_episodes`: Number of training episodes (default: 5000)
-- `optimization_strategy`: Either "epsilon_greedy" or "softmax" (default: "epsilon_greedy")
-
-- Training beyond 100 states is just a pain and I only do it for fun
-- Adding a reward of -0.01 at every step was a MAJOR breakthrough (See "Determine reward" in gridworld1d.py). Think about why -
-  this was super fun for me. Without this reward, I just couldn't train past 50 states in reasonable cpu time.
-- You will find a python notebook file (main.ipynb). It is a failed attempt to make this run in a notebook.
-
-### Epsilon-Greedy Parameters (when optimization_strategy = "epsilon_greedy")
-
+- `num_episodes`: Number of training episodes (default: 500)
 - `learning_rate`: Learning rate for Q-value updates (default: 0.1)
 - `discount_factor`: Discount factor for future rewards (default: 0.99)
 - `epsilon`: Initial exploration rate (default: 1.0)
 - `epsilon_decay`: Decay rate for exploration (default: 0.99)
 - `epsilon_min`: Minimum exploration rate (default: 0.01)
 
-### Softmax Parameters (when optimization_strategy = "softmax")
-
-- `temperature`: Initial temperature for softmax exploration (default: 1.0)
-- `temperature_decay`: Decay rate for temperature (default: 0.9)
-- `temperature_min`: Minimum temperature value (default: 0.1)
-
 ### Display Parameters
 
 - `sleep_time`: Time to pause between episodes (default: 0)
-- `max_rows_in_q_value_table`: Maximum number of rows to display in Q-value table (default: 10)
 
 ## Visualization Features
 
@@ -185,17 +159,16 @@ pip install -r requirements.txt
 Run the main script to start the training:
 
 ```bash
-python 1dworld.py # for 1D world
-python 2dworld.py # for 2D world
+python main.py
 ```
 
 The program will:
 
-1. Initialize a 1D gridworld environment
-2. Create a Q-Learning agent with the specified exploration strategy
+1. Initialize a 2D gridworld environment
+2. Create a Q-Learning agent with epsilon-greedy exploration
 3. Train the agent for the specified number of episodes
 4. Display real-time progress using Rich
-5. Show final Q-values and learning curves
+5. Show the final path and learning metrics
 
 ## Future Improvements
 
