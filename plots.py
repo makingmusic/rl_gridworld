@@ -7,6 +7,8 @@ from rich.console import Console
 from rich.text import Text
 import matplotlib.pyplot as plt
 import numpy as np
+from matplotlib import pyplot as plt
+from matplotlib.lines import Line2D
 
 def create_grid_display(grid_size_x, grid_size_y, start_pos, goal_pos, qtable):
     """Create a text-based grid display showing Q-values and decisions."""
@@ -382,130 +384,80 @@ def get_best_path_length(grid_size_x, grid_size_y, start_pos, goal_pos, qtable):
         return None
     return len(path) - 1  # Number of steps, not number of states
 
-def plot_policy_arrows(grid_size_x, grid_size_y, start_pos, goal_pos, qtable):
+def saveQTableAsImage(qtablewithpolicyarrows, filename="qtable_heatmap.png", start_pos=(0,0), goal_pos=None):
     """
-    Create a matplotlib figure showing the best action (policy arrow) for each state in the grid.
-    Start and goal are highlighted. No Q-values, just arrows.
-    Returns the matplotlib figure object.
+    Save the Q-table policy as an image with arrows indicating the best action for each state.
+    Arrow codes:
+        1: up, 2: down, 3: left, 4: right, 0: no arrow
+    The actual path from start_pos to goal_pos is shown in blue.
     """
-    fig, ax = plt.subplots(figsize=(grid_size_x, grid_size_y))
-    ax.set_xlim(-0.5, grid_size_x - 0.5)
-    ax.set_ylim(-0.5, grid_size_y - 0.5)
-    ax.set_xticks(np.arange(-0.5, grid_size_x, 1), minor=True)
-    ax.set_yticks(np.arange(-0.5, grid_size_y, 1), minor=True)
-    ax.grid(which='minor', color='gray', linestyle='-', linewidth=1)
-    ax.set_xticks([])
-    ax.set_yticks([])
-    ax.set_aspect('equal')
-    
-    # Draw arrows for best action in each cell
-    arrow_dict = {'up': (0, 0.3, r'$\uparrow$'),
-                  'down': (0, -0.3, r'$\downarrow$'),
-                  'left': (-0.3, 0, r'$\leftarrow$'),
-                  'right': (0.3, 0, r'$\rightarrow$')}
-    for x in range(grid_size_x):
-        for y in range(grid_size_y):
-            state = (x, y)
-            if state in qtable:
-                actions = qtable[state]
-                best_action = max(actions.items(), key=lambda x: x[1])[0]
-                dx, dy, arrow = arrow_dict[best_action]
-                if all(v == 0.0 for v in actions.values()):
-                    continue  # No arrow if all Q-values are zero
-                ax.text(x + 0.5 + dx, y + 0.5 + dy, arrow, fontsize=22, ha='center', va='center', color='C0')
-    
-    # Highlight start and goal
-    sx, sy = start_pos
-    gx, gy = goal_pos
-    ax.add_patch(plt.Rectangle((sx, sy), 1, 1, fill=True, color='lime', alpha=0.4, label='Start'))
-    ax.add_patch(plt.Rectangle((gx, gy), 1, 1, fill=True, color='red', alpha=0.4, label='Goal'))
-    
-    # Legend
-    from matplotlib.lines import Line2D
-    legend_elements = [Line2D([0], [0], marker='s', color='w', label='Start', markerfacecolor='lime', markersize=15, alpha=0.4),
-                      Line2D([0], [0], marker='s', color='w', label='Goal', markerfacecolor='red', markersize=15, alpha=0.4)]
-    ax.legend(handles=legend_elements, loc='upper right')
-    
-    ax.invert_yaxis()  # (0,0) at bottom left
-    plt.tight_layout()
-    return fig
+    if not qtablewithpolicyarrows:
+        print("Q-table is empty. Nothing to plot.")
+        return
 
-def plot_actual_path_policy(grid_size_x, grid_size_y, start_pos, goal_pos, qtable):
-    """
-    Create a matplotlib figure showing the best path (policy arrows) from start to goal, using the same logic as display_actual_path.
-    Only the best path is shown, with arrows, start, and goal highlighted.
-    Returns the matplotlib figure object.
-    """
-    fig, ax = plt.subplots(figsize=(grid_size_x, grid_size_y))
-    ax.set_xlim(-0.5, grid_size_x - 0.5)
-    ax.set_ylim(-0.5, grid_size_y - 0.5)
-    ax.set_xticks(np.arange(-0.5, grid_size_x, 1), minor=True)
-    ax.set_yticks(np.arange(-0.5, grid_size_y, 1), minor=True)
-    ax.grid(which='minor', color='gray', linestyle='-', linewidth=1)
-    ax.set_xticks([])
-    ax.set_yticks([])
-    ax.set_aspect('equal')
+    # Get grid size
+    xs = [state[0] for state in qtablewithpolicyarrows]
+    ys = [state[1] for state in qtablewithpolicyarrows]
+    min_x, max_x = min(xs), max(xs)
+    min_y, max_y = min(ys), max(ys)
+    width = max_x - min_x + 1
+    height = max_y - min_y + 1
 
-    # Compute the best path and arrows (same as display_actual_path)
+    # If goal_pos is not provided, use the farthest state as goal
+    if goal_pos is None:
+        goal_pos = (max_x, max_y)
+
+    # Trace the actual path from start_pos to goal_pos
+    path_states = set()
     current_pos = start_pos
-    path = [current_pos]
-    path_arrows = {}
-    max_steps = 5 * (grid_size_x + grid_size_y)
+    max_steps = 5 * (width + height)
     steps_taken = 0
-    while current_pos != goal_pos and steps_taken < max_steps:
-        if current_pos not in qtable or not qtable[current_pos]:
+    while current_pos in qtablewithpolicyarrows and steps_taken < max_steps:
+        path_states.add(current_pos)
+        if current_pos == goal_pos:
             break
-        actions = qtable[current_pos]
-        action_values = {
-            'up': actions.get('up', 0.0),
-            'down': actions.get('down', 0.0),
-            'left': actions.get('left', 0.0),
-            'right': actions.get('right', 0.0)
-        }
-        if all(v == 0.0 for v in action_values.values()):
+        code = int(qtablewithpolicyarrows[current_pos]['policyarrow'])
+        if code == 0:
             break
-        best_action = max(action_values.items(), key=lambda x: x[1])[0]
-        arrows = {
-            'up': '↑',
-            'down': '↓',
-            'left': '←',
-            'right': '→'
-        }
         x, y = current_pos
-        path_arrows[(x, y)] = arrows[best_action]
-        if best_action == 'up':
+        if code == 1:
             current_pos = (x, y + 1)
-        elif best_action == 'down':
+        elif code == 2:
             current_pos = (x, y - 1)
-        elif best_action == 'left':
+        elif code == 3:
             current_pos = (x - 1, y)
-        elif best_action == 'right':
+        elif code == 4:
             current_pos = (x + 1, y)
-        path.append(current_pos)
+        else:
+            break
         steps_taken += 1
 
-    # Draw arrows and debug dots for the best path, perfectly centered and y-reversed
-    for (x, y), arrow in path_arrows.items():
-        plot_y = grid_size_y - 1 - y
-        # Debug dot at center
-        ax.plot(x + 0.5, plot_y + 0.5, 'ko', markersize=3)
-        # Arrow at center
-        ax.text(x + 0.5, plot_y + 0.5, arrow, fontsize=22, ha='center', va='center', color='C0')
+    fig, ax = plt.subplots(figsize=(width, height))
+    ax.set_xlim(min_x - 0.5, max_x + 0.5)
+    ax.set_ylim(min_y - 0.5, max_y + 0.5)
+    ax.set_xticks(range(min_x, max_x + 1))
+    ax.set_yticks(range(min_y, max_y + 1))
+    ax.grid(True)
 
-    # Highlight start and goal (y-reversed)
-    sx, sy = start_pos
-    gx, gy = goal_pos
-    plot_sy = grid_size_y - 1 - sy
-    plot_gy = grid_size_y - 1 - gy
-    ax.add_patch(plt.Rectangle((sx, plot_sy), 1, 1, fill=True, color='lime', alpha=0.4, label='S'))
-    ax.add_patch(plt.Rectangle((gx, plot_gy), 1, 1, fill=True, color='red', alpha=0.4, label='G'))
+    # Arrow deltas: (dx, dy)
+    arrow_deltas = {
+        1: (0, 0.3),   # up
+        2: (0, -0.3),  # down
+        3: (-0.3, 0),  # left
+        4: (0.3, 0),   # right
+    }
 
-    # Legend
-    from matplotlib.lines import Line2D
-    legend_elements = [Line2D([0], [0], marker='s', color='w', label='Start', markerfacecolor='lime', markersize=15, alpha=0.4),
-                      Line2D([0], [0], marker='s', color='w', label='Goal', markerfacecolor='red', markersize=15, alpha=0.4)]
-    ax.legend(handles=legend_elements, loc='upper right')
+    for (x, y), info in qtablewithpolicyarrows.items():
+        code = int(info['policyarrow'])
+        if code == 0:
+            continue  # No arrow
+        dx, dy = arrow_deltas[code]
+        color = 'b' if (x, y) in path_states else 'k'
+        ax.arrow(x, y, dx, dy, head_width=0.2, head_length=0.2, fc=color, ec=color)
 
+    ax.set_aspect('equal')
+    plt.title("Q-Table Policy Arrows (Blue = Actual Path)")
     plt.tight_layout()
-    return fig
+    plt.savefig(filename)
+    plt.close()
 

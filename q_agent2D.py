@@ -88,6 +88,41 @@ class QLearningAgent2D:
         """Get the Q-table."""
         return self.q_table
 
+# todo: do i even need this function ? cleanup code.    
+    def getQTableAsNumPyArray(self):
+        """Get the Q-table as a NumPy array."""
+        return np.array(list(self.q_table.values()))
+    
+    def getQTableAsPolicyArrows(self):
+        """Convert Q-table to a dictionary of policy arrows based on maximum Q-values."""
+        q_table_policyarrows = {}
+        
+        # Define arrow mappings
+        arrows = {
+            'up'   : 1,
+            'down' : 2,
+            'left' : 3,
+            'right': 4
+        }
+        #arrows = {
+        #    'up': '↑',
+        #    'down': '↓',
+        #    'left': '←',
+        #    'right': '→'
+        #}
+        
+        # For each state in the Q-table
+        for state, actions in self.q_table.items():
+            # Find the action with maximum Q-value
+            best_action = max(actions.items(), key=lambda x: x[1])[0]
+            # If all values are 0, use a dot
+            if all(v == 0.0 for v in actions.values()):
+                q_table_policyarrows[state] = {'policyarrow': '0'}
+            else:
+                q_table_policyarrows[state] = {'policyarrow': arrows[best_action]}
+                
+        return q_table_policyarrows
+
     def print_q_table(self):
         """Print the Q-table in a formatted way for 2D states."""
         print("\nQ-Table:")
