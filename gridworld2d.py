@@ -1,16 +1,19 @@
 import numpy as np
 
 class GridWorld2D:
-    def __init__(self, grid_size=5, start_pos=(0, 0), end_pos=(4, 4)):
+    def __init__(self, grid_size_x=5, grid_size_y=5, start_pos=(0, 0), end_pos=(4, 4)):
         """
         Initialize a 2D gridworld environment.
         
         Args:
-            grid_size (int): Size of the grid (grid_size x grid_size). Default is 5.
+            grid_size_x (int): Width of the grid. Default is 5.
+            grid_size_y (int): Height of the grid. Default is 5.
             start_pos (tuple): Starting position coordinates (x, y). Default is (0, 0).
             end_pos (tuple): Goal position coordinates (x, y). Default is (4, 4).
+            Note: (0,0) is at the bottom left, with x increasing right and y increasing up.
         """
-        self.grid_size = grid_size
+        self.grid_size_x = grid_size_x
+        self.grid_size_y = grid_size_y
         self.start_pos = start_pos
         self.end_pos = end_pos
         self.current_pos = start_pos
@@ -33,8 +36,8 @@ class GridWorld2D:
             ValueError: If position is outside grid boundaries
         """
         x, y = pos
-        if not (0 <= x < self.grid_size and 0 <= y < self.grid_size):
-            raise ValueError(f"Position {pos} is outside grid boundaries (0 to {self.grid_size-1})")
+        if not (0 <= x < self.grid_size_x and 0 <= y < self.grid_size_y):
+            raise ValueError(f"Position {pos} is outside grid boundaries (x: 0 to {self.grid_size_x-1}, y: 0 to {self.grid_size_y-1})")
     
     def reset(self):
         """
@@ -84,9 +87,9 @@ class GridWorld2D:
         
         # Calculate next position based on action
         if action == 'up':
-            next_pos = (x, y - 1)
+            next_pos = (x, y + 1)  # y increases up
         elif action == 'down':
-            next_pos = (x, y + 1)
+            next_pos = (x, y - 1)  # y decreases down
         elif action == 'left':
             next_pos = (x - 1, y)
         elif action == 'right':
@@ -114,25 +117,26 @@ class GridWorld2D:
     def render(self):
         """
         Visualize the current state of the gridworld.
+        The grid is displayed with (0,0) at the bottom left.
         
         Returns:
             str: String representation of the grid
         """
-        grid = [['.' for _ in range(self.grid_size)] for _ in range(self.grid_size)]
+        grid = [['.' for _ in range(self.grid_size_x)] for _ in range(self.grid_size_y)]
         
         # Mark start position
         x, y = self.start_pos
-        grid[y][x] = 'S'
+        grid[y][x] = 'S'  # y is already in the correct orientation
         
         # Mark end position
         x, y = self.end_pos
-        grid[y][x] = 'G'
+        grid[y][x] = 'G'  # y is already in the correct orientation
         
         # Mark current position
         x, y = self.current_pos
         if grid[y][x] not in ['S', 'G']:  # Don't overwrite start or goal
             grid[y][x] = 'A'
         
-        # Convert grid to string representation
-        grid_str = '\n'.join([' '.join(row) for row in grid])
+        # Convert grid to string representation, reversing the rows to show (0,0) at bottom
+        grid_str = '\n'.join([' '.join(row) for row in reversed(grid)])
         return grid_str
