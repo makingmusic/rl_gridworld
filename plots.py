@@ -5,6 +5,8 @@ from rich.console  import Group
 from rich.panel    import Panel
 from rich.console import Console
 from rich.text import Text
+import matplotlib.pyplot as plt
+import numpy as np
 
 def create_grid_display(grid_size_x, grid_size_y, start_pos, goal_pos, qtable):
     """Create a text-based grid display showing Q-values and decisions."""
@@ -343,4 +345,167 @@ def plotQTableValues(pltPointer, qtable_data, states_of_interest):
     pltPointer.title('Q-Values Over Time')
     pltPointer.legend()
     pltPointer.grid(True)
+
+def get_best_path_length(grid_size_x, grid_size_y, start_pos, goal_pos, qtable):
+    """Return the length of the best path from start_pos to goal_pos using the Q-table."""
+    current_pos = start_pos
+    path = [current_pos]
+    max_steps = 5 * (grid_size_x + grid_size_y)
+    steps_taken = 0
+
+    while current_pos != goal_pos and steps_taken < max_steps:
+        if current_pos not in qtable or not qtable[current_pos]:
+            break
+        actions = qtable[current_pos]
+        action_values = {
+            'up': actions.get('up', 0.0),
+            'down': actions.get('down', 0.0),
+            'left': actions.get('left', 0.0),
+            'right': actions.get('right', 0.0)
+        }
+        if all(v == 0.0 for v in action_values.values()):
+            break
+        best_action = max(action_values.items(), key=lambda x: x[1])[0]
+        x, y = current_pos
+        if best_action == 'up':
+            current_pos = (x, y + 1)
+        elif best_action == 'down':
+            current_pos = (x, y - 1)
+        elif best_action == 'left':
+            current_pos = (x - 1, y)
+        elif best_action == 'right':
+            current_pos = (x + 1, y)
+        path.append(current_pos)
+        steps_taken += 1
+    # If goal not reached, return None or a large value
+    if current_pos != goal_pos:
+        return None
+    return len(path) - 1  # Number of steps, not number of states
+
+def plot_policy_arrows(grid_size_x, grid_size_y, start_pos, goal_pos, qtable):
+    """
+    Create a matplotlib figure showing the best action (policy arrow) for each state in the grid.
+    Start and goal are highlighted. No Q-values, just arrows.
+    Returns the matplotlib figure object.
+    """
+    fig, ax = plt.subplots(figsize=(grid_size_x, grid_size_y))
+    ax.set_xlim(-0.5, grid_size_x - 0.5)
+    ax.set_ylim(-0.5, grid_size_y - 0.5)
+    ax.set_xticks(np.arange(-0.5, grid_size_x, 1), minor=True)
+    ax.set_yticks(np.arange(-0.5, grid_size_y, 1), minor=True)
+    ax.grid(which='minor', color='gray', linestyle='-', linewidth=1)
+    ax.set_xticks([])
+    ax.set_yticks([])
+    ax.set_aspect('equal')
+    
+    # Draw arrows for best action in each cell
+    arrow_dict = {'up': (0, 0.3, r'$\uparrow$'),
+                  'down': (0, -0.3, r'$\downarrow$'),
+                  'left': (-0.3, 0, r'$\leftarrow$'),
+                  'right': (0.3, 0, r'$\rightarrow$')}
+    for x in range(grid_size_x):
+        for y in range(grid_size_y):
+            state = (x, y)
+            if state in qtable:
+                actions = qtable[state]
+                best_action = max(actions.items(), key=lambda x: x[1])[0]
+                dx, dy, arrow = arrow_dict[best_action]
+                if all(v == 0.0 for v in actions.values()):
+                    continue  # No arrow if all Q-values are zero
+                ax.text(x + 0.5 + dx, y + 0.5 + dy, arrow, fontsize=22, ha='center', va='center', color='C0')
+    
+    # Highlight start and goal
+    sx, sy = start_pos
+    gx, gy = goal_pos
+    ax.add_patch(plt.Rectangle((sx, sy), 1, 1, fill=True, color='lime', alpha=0.4, label='Start'))
+    ax.add_patch(plt.Rectangle((gx, gy), 1, 1, fill=True, color='red', alpha=0.4, label='Goal'))
+    
+    # Legend
+    from matplotlib.lines import Line2D
+    legend_elements = [Line2D([0], [0], marker='s', color='w', label='Start', markerfacecolor='lime', markersize=15, alpha=0.4),
+                      Line2D([0], [0], marker='s', color='w', label='Goal', markerfacecolor='red', markersize=15, alpha=0.4)]
+    ax.legend(handles=legend_elements, loc='upper right')
+    
+    ax.invert_yaxis()  # (0,0) at bottom left
+    plt.tight_layout()
+    return fig
+
+def plot_actual_path_policy(grid_size_x, grid_size_y, start_pos, goal_pos, qtable):
+    """
+    Create a matplotlib figure showing the best path (policy arrows) from start to goal, using the same logic as display_actual_path.
+    Only the best path is shown, with arrows, start, and goal highlighted.
+    Returns the matplotlib figure object.
+    """
+    fig, ax = plt.subplots(figsize=(grid_size_x, grid_size_y))
+    ax.set_xlim(-0.5, grid_size_x - 0.5)
+    ax.set_ylim(-0.5, grid_size_y - 0.5)
+    ax.set_xticks(np.arange(-0.5, grid_size_x, 1), minor=True)
+    ax.set_yticks(np.arange(-0.5, grid_size_y, 1), minor=True)
+    ax.grid(which='minor', color='gray', linestyle='-', linewidth=1)
+    ax.set_xticks([])
+    ax.set_yticks([])
+    ax.set_aspect('equal')
+
+    # Compute the best path and arrows (same as display_actual_path)
+    current_pos = start_pos
+    path = [current_pos]
+    path_arrows = {}
+    max_steps = 5 * (grid_size_x + grid_size_y)
+    steps_taken = 0
+    while current_pos != goal_pos and steps_taken < max_steps:
+        if current_pos not in qtable or not qtable[current_pos]:
+            break
+        actions = qtable[current_pos]
+        action_values = {
+            'up': actions.get('up', 0.0),
+            'down': actions.get('down', 0.0),
+            'left': actions.get('left', 0.0),
+            'right': actions.get('right', 0.0)
+        }
+        if all(v == 0.0 for v in action_values.values()):
+            break
+        best_action = max(action_values.items(), key=lambda x: x[1])[0]
+        arrows = {
+            'up': '↑',
+            'down': '↓',
+            'left': '←',
+            'right': '→'
+        }
+        x, y = current_pos
+        path_arrows[(x, y)] = arrows[best_action]
+        if best_action == 'up':
+            current_pos = (x, y + 1)
+        elif best_action == 'down':
+            current_pos = (x, y - 1)
+        elif best_action == 'left':
+            current_pos = (x - 1, y)
+        elif best_action == 'right':
+            current_pos = (x + 1, y)
+        path.append(current_pos)
+        steps_taken += 1
+
+    # Draw arrows and debug dots for the best path, perfectly centered and y-reversed
+    for (x, y), arrow in path_arrows.items():
+        plot_y = grid_size_y - 1 - y
+        # Debug dot at center
+        ax.plot(x + 0.5, plot_y + 0.5, 'ko', markersize=3)
+        # Arrow at center
+        ax.text(x + 0.5, plot_y + 0.5, arrow, fontsize=22, ha='center', va='center', color='C0')
+
+    # Highlight start and goal (y-reversed)
+    sx, sy = start_pos
+    gx, gy = goal_pos
+    plot_sy = grid_size_y - 1 - sy
+    plot_gy = grid_size_y - 1 - gy
+    ax.add_patch(plt.Rectangle((sx, plot_sy), 1, 1, fill=True, color='lime', alpha=0.4, label='S'))
+    ax.add_patch(plt.Rectangle((gx, plot_gy), 1, 1, fill=True, color='red', alpha=0.4, label='G'))
+
+    # Legend
+    from matplotlib.lines import Line2D
+    legend_elements = [Line2D([0], [0], marker='s', color='w', label='Start', markerfacecolor='lime', markersize=15, alpha=0.4),
+                      Line2D([0], [0], marker='s', color='w', label='Goal', markerfacecolor='red', markersize=15, alpha=0.4)]
+    ax.legend(handles=legend_elements, loc='upper right')
+
+    plt.tight_layout()
+    return fig
 

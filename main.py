@@ -6,12 +6,17 @@ from rich.console import Group, Console
 import plots
 from q_agent2D import QLearningAgent2D
 from gridworld2d import GridWorld2D
+import wandb
+import io
+from PIL import Image
+
+USE_WANDB = True  # Set to False to disable wandb logging
 
 # default values for learning parameters
 learning_rate = 0.1  # learning rate for Q-value updates
 discount_factor = 0.99  # discount factor for future rewards
 epsilon = 1.0  # initial exploration rate
-epsilon_decay = 0.95  # decay rate for exploration
+epsilon_decay = 0.95  # decay rate for exploration 
 epsilon_min = 0.01  # minimum exploration rate
 # Epsilon-greedy parameters
 exploration_strategy = "epsilon_greedy"
@@ -22,8 +27,8 @@ epsilon_decay = 0.99
 epsilon_min = 0.01
 
 # Grid Configuration Variables 
-num_episodes = 500  # number of training episodes
-grid_size_x = 10  # width of the 2D grid
+num_episodes = 50  # number of training episodes
+grid_size_x = 5  # width of the 2D grid
 grid_size_y = 5  # height of the 2D grid
 start_pos = (0, 0)  # starting position at bottom left
 goal_pos = (grid_size_x-1, grid_size_y-1)  # goal position at top right
@@ -93,6 +98,25 @@ path_display = plots.display_actual_path(grid_size_x, grid_size_y, start_pos, go
 # Create display group with progress bars first
 display_group = Group(progress, posProgressBar, stepsProgressBar)
 
+# Initialize wandb
+if USE_WANDB:
+    wandb.init(project="rl-gridworld-qlearning", config={
+        "learning_rate": learning_rate,
+        "discount_factor": discount_factor,
+        "epsilon": epsilon,
+        "epsilon_decay": epsilon_decay,
+        "epsilon_min": epsilon_min,
+        "num_episodes": num_episodes,
+        "grid_size_x": grid_size_x,
+        "grid_size_y": grid_size_y,
+        "start_pos": start_pos,
+        "goal_pos": goal_pos,
+        "exploration_strategy": exploration_strategy
+    })
+    config = wandb.config
+else:
+    config = None
+
 with Live(display_group, refresh_per_second=50) as live:
     # Training loop
     start_time = time.time()
@@ -101,6 +125,8 @@ with Live(display_group, refresh_per_second=50) as live:
         state = env.reset()
         done = False
         step_count = 0
+        episode_reward = 0
+        episode_start_time = time.time()  # Track episode start time
 
         while not done:
             action = agent.choose_action(state)
@@ -108,6 +134,7 @@ with Live(display_group, refresh_per_second=50) as live:
             agent.update_q_value(state, action, reward, next_state, done)
             state = next_state
             step_count += 1
+            episode_reward += reward
 
             # Update position progress bar
             current_pos = env.get_state()
@@ -132,6 +159,27 @@ with Live(display_group, refresh_per_second=50) as live:
         episode_data.append(episode)
         step_data.append(step_count)
         epsilon_data.append(agent.epsilon)
+        # Log metrics to wandb
+        if USE_WANDB:
+            episode_duration = time.time() - episode_start_time
+            best_path_length = plots.get_best_path_length(grid_size_x, grid_size_y, start_pos, goal_pos, agent.getQTable())
+            # Log Q-table best path policy as image (matching display_actual_path logic)
+            fig = plots.plot_actual_path_policy(grid_size_x, grid_size_y, start_pos, goal_pos, agent.getQTable())
+            buf = io.BytesIO()
+            fig.savefig(buf, format='png')
+            buf.seek(0)
+            img = Image.open(buf)
+            wandb.log({
+                "episode": episode,
+                "steps": step_count,
+                "epsilon": agent.epsilon,
+                "reward": episode_reward,
+                "q_table": str(agent.getQTable()),
+                "episode_duration": episode_duration,
+                "best_path_length": best_path_length,
+                "policy_arrows": wandb.Image(img, caption=f"Policy Arrows Ep {episode}")
+            }, step=episode)
+            plt.close(fig)
         
         # Update last ten steps
         last_ten_steps.pop(0)  # Remove oldest step count
@@ -170,6 +218,9 @@ path_table = plots.display_actual_path(grid_size_x, grid_size_y, start_pos, goal
 console = Console()
 console.print("\nActual path taken by the model:")
 console.print(Panel(path_table, title="Path"))
+
+if USE_WANDB:
+    wandb.finish()
 
 # Plot steps per episode : Uncomment this section to see the steps per episode
 #plots.plotStepsPerEpisode(plt, episode_data, step_data)
