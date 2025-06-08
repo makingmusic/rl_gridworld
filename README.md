@@ -69,6 +69,15 @@ The project includes rich-based real-time visualizations:
    - Epsilon decay visualization
    - Q-table evolution
 
+## Weights & Biases (wandb) Integration
+
+[Weights & Biases (wandb)](https://wandb.ai/). By default, wandb logging is enabled.
+**How to use:**
+
+- By default, wandb logging is enabled (`USE_WANDB = True` in `main.py`).
+- If you do not wish to use wandb, set `USE_WANDB = False` in `main.py`.
+- Assumption is that you have w&b setup. Else just keep it false and move on. I had ended up putting so much visualization code that I thought wandb would be ideal. However the q_table is much worse in wandb than the fancy terminal animation that I made using Rich.
+
 ## Configuration
 
 You can modify the following parameters in `main.py`:
@@ -138,6 +147,7 @@ Future:
   - numpy
   - matplotlib
   - rich
+  - wandb
 
 ## Installation
 
@@ -161,6 +171,8 @@ Run the main script to start the training:
 ```bash
 python main.py
 ```
+
+When you run the script for the first time with wandb enabled, you may be prompted to log in or create a wandb account. You can skip this if you do not wish to log online, or disable wandb logging in `main.py`.
 
 The program will:
 

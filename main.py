@@ -1,7 +1,6 @@
 import io 
 import time
 import plots
-import wandb
 import matplotlib.pyplot as plt
 from PIL import Image
 from rich.live import Live
@@ -10,8 +9,13 @@ from rich.console import Group, Console
 from rich.panel import Panel
 from q_agent2D import QLearningAgent2D
 from gridworld2d import GridWorld2D
+import logWandB
+import pandas as pd
 
+# wandb parameters
 USE_WANDB = True  # Set to False to disable wandb logging
+N_IMAGE_EPISODES = 10  # Number of intermediate episodes to log with image
+
 
 # default values for learning parameters
 learning_rate = 0.1  # learning rate for Q-value updates
@@ -28,9 +32,9 @@ epsilon_decay = 0.99
 epsilon_min = 0.01
 
 # Grid Configuration Variables 
-num_episodes = 150  # number of training episodes
+num_episodes = 500  # number of training episodes
 grid_size_x = 10  # width of the 2D grid
-grid_size_y = 5  # height of the 2D grid
+grid_size_y = 10  # height of the 2D grid
 start_pos = (0, 0)  # starting position at bottom left
 goal_pos = (grid_size_x-1, grid_size_y-1)  # goal position at top right
 
@@ -101,7 +105,7 @@ display_group = Group(progress, posProgressBar, stepsProgressBar)
 
 # Initialize wandb
 if USE_WANDB:
-    wandb.init(project="rl-gridworld-qlearning", config={
+    wandbconfig = {
         "learning_rate": learning_rate,
         "discount_factor": discount_factor,
         "epsilon": epsilon,
@@ -113,10 +117,8 @@ if USE_WANDB:
         "start_pos": start_pos,
         "goal_pos": goal_pos,
         "exploration_strategy": exploration_strategy
-    })
-    config = wandb.config
-else:
-    config = None
+    }
+    logWandB.initWandB("rl-gridworld-qlearning", config=wandbconfig)
 
 with Live(display_group, refresh_per_second=50) as live:
     # Training loop
@@ -164,16 +166,23 @@ with Live(display_group, refresh_per_second=50) as live:
         if USE_WANDB:
             episode_duration = time.time() - episode_start_time
             best_path_length = plots.get_best_path_length(grid_size_x, grid_size_y, start_pos, goal_pos, agent.getQTable())
-            wandb.log({
+            q_table_img = plots.saveQTableAsImage(agent.getQTableAsPolicyArrows(), filename=None, start_pos=start_pos, goal_pos=goal_pos)
+            q_table_df = pd.DataFrame.from_dict(
+                {k: v for k, v in agent.getQTable().items()},
+                orient='index'
+            )
+            wandbconfig = {
                 "episode": episode,
                 "steps": step_count,
                 "epsilon": agent.epsilon,
                 "reward": episode_reward,
-                "q_table": str(agent.getQTable()),
+                "q_table": logWandB.wandb.Table(dataframe=q_table_df),
                 "episode_duration": episode_duration,
                 "best_path_length": best_path_length,
-            }, step=episode)
-        
+                "q_table_heatmap_img": logWandB.wandb.Image(q_table_img)
+            }
+            logWandB.logEpisodeWithImageControl(wandbconfig, step=episode, episode=episode, total_episodes=num_episodes, N=N_IMAGE_EPISODES)
+            
         # Update last ten steps
         last_ten_steps.pop(0)  # Remove oldest step count
         last_ten_steps.append(step_count)  # Add current step count
@@ -208,20 +217,21 @@ print(f"Training completed in {end_time - start_time:.2f} seconds")
 
 # Display the actual path taken by the model
 path_table = plots.display_actual_path(grid_size_x, grid_size_y, start_pos, goal_pos, agent.getQTable())
-q_table_policyarrows = agent.getQTableAsPolicyArrows()
 
-plots.saveQTableAsImage(q_table_policyarrows, "q_heatmap.png", start_pos, goal_pos)
 if USE_WANDB:
-    wandb.log({"q_table_heatmap": wandb.Image("q_heatmap.png")})
-
-
+    q_table_policyarrows = agent.getQTableAsPolicyArrows()
+    q_table_img = plots.saveQTableAsImage(q_table_policyarrows, "q_heatmap.png", start_pos, goal_pos)
+    wandbconfig = {
+        "q_table_heatmap_img": logWandB.wandb.Image(q_table_img)
+    }
+    logWandB.logEpisode(wandbconfig, step=num_episodes-1)
 
 console = Console()
 console.print("\nActual path taken by the model:")
 console.print(Panel(path_table, title="Path"))
 
 if USE_WANDB:
-    wandb.finish()
+    logWandB.closeWandB()
 
 # Plot steps per episode : Uncomment this section to see the steps per episode
 #plots.plotStepsPerEpisode(plt, episode_data, step_data)

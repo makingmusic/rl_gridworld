@@ -1,3 +1,4 @@
+import io
 from rich.live     import Live
 from rich.table    import Table
 from rich.progress import BarColumn, Progress, SpinnerColumn, TextColumn, MofNCompleteColumn, TimeElapsedColumn, TimeRemainingColumn, TaskProgressColumn
@@ -9,6 +10,8 @@ import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib import pyplot as plt
 from matplotlib.lines import Line2D
+from PIL import Image
+
 
 def create_grid_display(grid_size_x, grid_size_y, start_pos, goal_pos, qtable):
     """Create a text-based grid display showing Q-values and decisions."""
@@ -410,7 +413,7 @@ def saveQTableAsImage(qtablewithpolicyarrows, filename="qtable_heatmap.png", sta
     # Trace the actual path from start_pos to goal_pos
     path_states = set()
     current_pos = start_pos
-    max_steps = 5 * (width + height)
+    max_steps = 2 * (width + height)
     steps_taken = 0
     while current_pos in qtablewithpolicyarrows and steps_taken < max_steps:
         path_states.add(current_pos)
@@ -458,6 +461,13 @@ def saveQTableAsImage(qtablewithpolicyarrows, filename="qtable_heatmap.png", sta
     ax.set_aspect('equal')
     plt.title("Q-Table Policy Arrows (Blue = Actual Path)")
     plt.tight_layout()
-    plt.savefig(filename)
+    #plt.savefig(filename)
+    buf = io.BytesIO()
+    buf.seek(0)
+    plt.savefig(buf, format='png')
     plt.close()
+    img = Image.open(buf)
+
+    return img
+    #plt.close() # todo: close the figure outside this function
 
