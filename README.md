@@ -72,11 +72,28 @@ The project includes rich-based real-time visualizations:
 ## Weights & Biases (wandb) Integration
 
 [Weights & Biases (wandb)](https://wandb.ai/). By default, wandb logging is enabled.
-**How to use:**
 
+### Setting up wandb
+
+**Step 1: Install wandb**
+```bash
+pip install wandb
+```
+
+**Step 2: Create a wandb account and login**
+1. Go to [wandb.ai](https://wandb.ai/) and create a free account
+2. Login to wandb in your terminal:
+```bash
+wandb login
+```
+3. You'll be prompted to paste your API key (found at [wandb.ai/authorize](https://wandb.ai/authorize))
+
+**Step 3: Configure the project**
 - By default, wandb logging is enabled (`USE_WANDB = True` in `main.py`).
 - If you do not wish to use wandb, set `USE_WANDB = False` in `main.py`.
-- Assumption is that you have w&b setup. Else just keep it false and move on. I had ended up putting so much visualization code that I thought wandb would be ideal. However the q_table is much worse in wandb than the fancy terminal animation that I made using Rich.
+- The project will automatically create a wandb project called "rl-gridworld-qlearning"
+
+**Note:** If you prefer not to use wandb, simply set `USE_WANDB = False` in `main.py` and the program will run without any online logging. The local terminal visualizations using Rich are actually quite comprehensive and may be more useful for understanding the learning process than the wandb dashboard.
 
 ## Configuration
 
