@@ -1,14 +1,12 @@
-import io 
+from q_agent2D import QLearningAgent2D
+from gridworld2d import GridWorld2D
 import time
 import plots
 import matplotlib.pyplot as plt
-from PIL import Image
 from rich.live import Live
 from rich.progress import BarColumn, Progress, SpinnerColumn, TextColumn, MofNCompleteColumn, TimeElapsedColumn, TimeRemainingColumn, TaskProgressColumn
 from rich.console import Group, Console
 from rich.panel import Panel
-from q_agent2D import QLearningAgent2D
-from gridworld2d import GridWorld2D
 import logWandB
 import pandas as pd
 
@@ -54,6 +52,11 @@ agent = QLearningAgent2D(
     epsilon_min=epsilon_min,
     exploration_strategy=exploration_strategy
 )
+
+# Initialize matplotlib figures and axes for all visualizations
+qtable_fig, qtable_ax = plt.subplots(figsize=(grid_size_x, grid_size_y))
+steps_fig, steps_ax = plt.subplots(figsize=(8, 6))
+epsilon_fig, epsilon_ax = plt.subplots(figsize=(8, 6))
 
 # Initialize lists to store episode and step data
 episode_data = []
@@ -151,7 +154,6 @@ with Live(display_group, refresh_per_second=50) as live:
             # Update grid display and show it after progress bars
             grid_display = plots.update_grid_display(grid_display, agent.getQTable(), start_pos, goal_pos)
             grid_table = plots.grid_to_table(grid_display)
-            path_display= plots.display_actual_path(grid_size_x, grid_size_y, start_pos, goal_pos, agent.getQTable())
                 
             display_group = Group(progress, posProgressBar, stepsProgressBar,
                                   Panel(grid_table, title="Grid"),
@@ -163,10 +165,21 @@ with Live(display_group, refresh_per_second=50) as live:
         step_data.append(step_count)
         epsilon_data.append(agent.epsilon)
         # Log metrics to wandb
-        if USE_WANDB:
+        if USE_WANDB and plots.shouldThisEpisodeBeLogged(episode, num_episodes, N_IMAGE_EPISODES):
             episode_duration = time.time() - episode_start_time
             best_path_length = plots.get_best_path_length(grid_size_x, grid_size_y, start_pos, goal_pos, agent.getQTable())
-
+            q_table_img, qtable_fig, qtable_ax = plots.saveQTableAsImage(
+                agent.getQTableAsPolicyArrows(), 
+                filename=None, 
+                start_pos=start_pos, 
+                goal_pos=goal_pos,
+                fig=qtable_fig,
+                ax=qtable_ax
+            )
+            q_table_df = pd.DataFrame.from_dict(
+                {k: v for k, v in agent.getQTable().items()},
+                orient='index'
+            )
             wandbconfig = {
                 "episode": episode,
                 "steps": step_count,
@@ -176,6 +189,10 @@ with Live(display_group, refresh_per_second=50) as live:
                 "best_path_length": best_path_length,
             }
             logWandB.logEpisodeWithImageControl(wandbconfig, step=episode, episode=episode, total_episodes=num_episodes, N=N_IMAGE_EPISODES)
+            
+            # Update plots at the end of each episode
+            steps_fig, steps_ax = plots.plotStepsPerEpisode(plt, episode_data, step_data, fig=steps_fig, ax=steps_ax)
+            epsilon_fig, epsilon_ax = plots.plotEpsilonDecayPerEpisode(plt, episode_data, epsilon_data, fig=epsilon_fig, ax=epsilon_ax)
             
         # Update last ten steps
         last_ten_steps.pop(0)  # Remove oldest step count
@@ -201,6 +218,13 @@ with Live(display_group, refresh_per_second=50) as live:
         live.update(display_group)
         time.sleep(sleep_time)
 
+        # Update path display at the end of each episode
+        path_display = plots.display_actual_path(grid_size_x, grid_size_y, start_pos, goal_pos, agent.getQTable())
+        display_group = Group(progress, posProgressBar, stepsProgressBar,
+                              Panel(grid_table, title="Grid"),
+                              Panel(path_display, title="Current Best Path"))
+        live.update(display_group)
+
     end_time = time.time()
 
 # Final display update to show completion
@@ -214,11 +238,23 @@ path_table = plots.display_actual_path(grid_size_x, grid_size_y, start_pos, goal
 
 if USE_WANDB:
     q_table_policyarrows = agent.getQTableAsPolicyArrows()
-    q_table_img = plots.saveQTableAsImage(q_table_policyarrows, "q_heatmap.png", start_pos, goal_pos)
+    q_table_img, qtable_fig, qtable_ax = plots.saveQTableAsImage(
+        q_table_policyarrows, 
+        "q_heatmap.png", 
+        start_pos, 
+        goal_pos,
+        fig=qtable_fig,
+        ax=qtable_ax
+    )
     wandbconfig = {
         "q_table_heatmap_img": logWandB.wandb.Image(q_table_img)
     }
     logWandB.logEpisode(wandbconfig, step=num_episodes-1)
+
+# Clean up all matplotlib figures
+plt.close(qtable_fig)
+plt.close(steps_fig)
+plt.close(epsilon_fig)
 
 console = Console()
 console.print("\nActual path taken by the model:")
@@ -226,6 +262,10 @@ console.print(Panel(path_table, title="Path"))
 
 if USE_WANDB:
     logWandB.closeWandB()
+
+# Plot final visualizations
+steps_fig, steps_ax = plots.plotStepsPerEpisode(plt, episode_data, step_data, fig=steps_fig, ax=steps_ax)
+epsilon_fig, epsilon_ax = plots.plotEpsilonDecayPerEpisode(plt, episode_data, epsilon_data, fig=epsilon_fig, ax=epsilon_ax)
 
 # Plot steps per episode : Uncomment this section to see the steps per episode
 #plots.plotStepsPerEpisode(plt, episode_data, step_data)

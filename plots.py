@@ -1,7 +1,5 @@
 import io
-from rich.live     import Live
 from rich.table    import Table
-from rich.progress import BarColumn, Progress, SpinnerColumn, TextColumn, MofNCompleteColumn, TimeElapsedColumn, TimeRemainingColumn, TaskProgressColumn
 from rich.console  import Group
 from rich.panel    import Panel
 from rich.console import Console
@@ -11,6 +9,8 @@ import numpy as np
 from matplotlib import pyplot as plt
 from matplotlib.lines import Line2D
 from PIL import Image
+#from rich.live     import Live
+#from rich.progress import BarColumn, Progress, SpinnerColumn, TextColumn, MofNCompleteColumn, TimeElapsedColumn, TimeRemainingColumn, TaskProgressColumn
 
 
 def create_grid_display(grid_size_x, grid_size_y, start_pos, goal_pos, qtable):
@@ -67,8 +67,15 @@ def update_grid_display(grid_display, qtable, start_pos, goal_pos):
     # Create new grid display
     return create_grid_display(len(grid_display[0]), len(grid_display), start_pos, goal_pos, qtable)
 
-def plotStepsPerEpisode(pltPointer, episode_data, step_data, num_episodes=20):
-    pltPointer.figure(figsize=(pltPointer.rcParams['figure.figsize'][0] * 0.8, pltPointer.rcParams['figure.figsize'][1] * 0.8))
+def plotStepsPerEpisode(pltPointer, episode_data, step_data, num_episodes=20, fig=None, ax=None):
+    """Plot steps per episode with optional figure reuse."""
+    # Create new figure and axes if not provided
+    if fig is None or ax is None:
+        fig, ax = pltPointer.subplots(figsize=(pltPointer.rcParams['figure.figsize'][0] * 0.8, 
+                                              pltPointer.rcParams['figure.figsize'][1] * 0.8))
+    
+    # Clear existing content
+    ax.clear()
     
     # Determine which episodes to display
     if len(episode_data) <= 2 * num_episodes:
@@ -77,14 +84,14 @@ def plotStepsPerEpisode(pltPointer, episode_data, step_data, num_episodes=20):
         display_steps = step_data
         
         # Plot all episodes
-        pltPointer.plot(display_episodes, display_steps, 'b-', label='Steps')
+        ax.plot(display_episodes, display_steps, 'b-', label='Steps')
         
         # Add labels for all points
         for i in range(len(display_episodes)):
-            pltPointer.annotate(f'{display_steps[i]}', 
-                               xy=(display_episodes[i], display_steps[i]),
-                               xytext=(0, 10), textcoords='offset points',
-                               ha='center', va='bottom')
+            ax.annotate(f'{display_steps[i]}', 
+                       xy=(display_episodes[i], display_steps[i]),
+                       xytext=(0, 10), textcoords='offset points',
+                       ha='center', va='bottom')
     else:
         # Otherwise, show first num_episodes and last num_episodes episodes with a broken axis
         first_episodes = episode_data[:num_episodes]
@@ -97,7 +104,7 @@ def plotStepsPerEpisode(pltPointer, episode_data, step_data, num_episodes=20):
         gs = GridSpec(1, 2, width_ratios=[1, 1], wspace=0.05)
         
         # First subplot (first num_episodes episodes)
-        ax1 = pltPointer.subplot(gs[0])
+        ax1 = fig.add_subplot(gs[0])
         ax1.plot(first_episodes, first_steps, 'b-', label='Steps')
         
         # Add labels for first num_episodes episodes
@@ -108,7 +115,7 @@ def plotStepsPerEpisode(pltPointer, episode_data, step_data, num_episodes=20):
                         ha='center', va='bottom')
         
         # Second subplot (last num_episodes episodes)
-        ax2 = pltPointer.subplot(gs[1])
+        ax2 = fig.add_subplot(gs[1])
         ax2.plot(last_episodes, last_steps, 'b-', label='Steps')
         
         # Add labels for last num_episodes episodes
@@ -139,7 +146,7 @@ def plotStepsPerEpisode(pltPointer, episode_data, step_data, num_episodes=20):
         ax1.set_xlabel('Episode')
         ax2.set_xlabel('Episode')
         ax1.set_ylabel('Steps')
-        pltPointer.suptitle('Steps per Episode', y=1.05)
+        fig.suptitle('Steps per Episode', y=1.05)
         
         # Add grid to both subplots
         ax1.grid(True)
@@ -148,22 +155,44 @@ def plotStepsPerEpisode(pltPointer, episode_data, step_data, num_episodes=20):
         # Hide the right spine of the first subplot and the left spine of the second subplot
         ax1.spines['right'].set_visible(False)
         ax2.spines['left'].set_visible(False)
+    
+    return fig, ax
 
-def plotEpsilonDecayPerEpisode(pltPointer, episode_data, epsilon_data):
-    pltPointer.figure(figsize=(pltPointer.rcParams['figure.figsize'][0] * 0.8, pltPointer.rcParams['figure.figsize'][1] * 0.8))
-    pltPointer.plot(episode_data, epsilon_data, 'r-', label='Epsilon')
-    pltPointer.xlabel('Episode')
-    pltPointer.ylabel('Epsilon')
-    pltPointer.title('Epsilon Decay per Episode')
-    pltPointer.grid(True)
+def plotEpsilonDecayPerEpisode(pltPointer, episode_data, epsilon_data, fig=None, ax=None):
+    """Plot epsilon decay per episode with optional figure reuse."""
+    # Create new figure and axes if not provided
+    if fig is None or ax is None:
+        fig, ax = pltPointer.subplots(figsize=(pltPointer.rcParams['figure.figsize'][0] * 0.8, 
+                                              pltPointer.rcParams['figure.figsize'][1] * 0.8))
+    
+    # Clear existing content
+    ax.clear()
+    
+    ax.plot(episode_data, epsilon_data, 'r-', label='Epsilon')
+    ax.set_xlabel('Episode')
+    ax.set_ylabel('Epsilon')
+    ax.set_title('Epsilon Decay per Episode')
+    ax.grid(True)
+    
+    return fig, ax
 
-def plotTemperatureDecayPerEpisode(pltPointer, episode_data, temperature_data):
-    pltPointer.figure(figsize=(pltPointer.rcParams['figure.figsize'][0] * 0.8, pltPointer.rcParams['figure.figsize'][1] * 0.8))
-    pltPointer.plot(episode_data, temperature_data, 'g-', label='Temperature')
-    pltPointer.xlabel('Episode')
-    pltPointer.ylabel('Temperature')
-    pltPointer.title('Temperature Decay per Episode')
-    pltPointer.grid(True)
+def plotTemperatureDecayPerEpisode(pltPointer, episode_data, temperature_data, fig=None, ax=None):
+    """Plot temperature decay per episode with optional figure reuse."""
+    # Create new figure and axes if not provided
+    if fig is None or ax is None:
+        fig, ax = pltPointer.subplots(figsize=(pltPointer.rcParams['figure.figsize'][0] * 0.8, 
+                                              pltPointer.rcParams['figure.figsize'][1] * 0.8))
+    
+    # Clear existing content
+    ax.clear()
+    
+    ax.plot(episode_data, temperature_data, 'g-', label='Temperature')
+    ax.set_xlabel('Episode')
+    ax.set_ylabel('Temperature')
+    ax.set_title('Temperature Decay per Episode')
+    ax.grid(True)
+    
+    return fig, ax
 
 def grid_to_table(grid_display):
     from rich.table import Table
@@ -324,9 +353,23 @@ def display_1d_grid(grid_size, start_pos, goal_pos, qtable):
     table.add_row(*grid_display)
     return table
 
-def plotQTableValues(pltPointer, qtable_data, states_of_interest):
-    """Plot Q-values for specific states over episodes."""
-    pltPointer.figure(figsize=(pltPointer.rcParams['figure.figsize'][0] * 0.8, pltPointer.rcParams['figure.figsize'][1] * 0.8))
+def plotQTableValues(pltPointer, qtable_data, states_of_interest, fig=None, ax=None):
+    """Plot Q-values for specific states over episodes.
+    
+    Args:
+        pltPointer: Matplotlib pyplot instance
+        qtable_data: List of Q-tables over episodes
+        states_of_interest: List of states to plot
+        fig: Optional matplotlib figure instance to reuse
+        ax: Optional matplotlib axes instance to reuse
+    """
+    # Create new figure and axes if not provided
+    if fig is None or ax is None:
+        fig, ax = pltPointer.subplots(figsize=(pltPointer.rcParams['figure.figsize'][0] * 0.8, 
+                                              pltPointer.rcParams['figure.figsize'][1] * 0.8))
+    
+    # Clear existing content
+    ax.clear()
     
     # Create a plot for each state of interest
     for state in states_of_interest:
@@ -342,14 +385,16 @@ def plotQTableValues(pltPointer, qtable_data, states_of_interest):
                 episodes.append(episode)
         
         if episodes:  # Only plot if we have data for this state
-            pltPointer.plot(episodes, left_values, 'b-', label=f'State {state} Left')
-            pltPointer.plot(episodes, right_values, 'r-', label=f'State {state} Right')
+            ax.plot(episodes, left_values, 'b-', label=f'State {state} Left')
+            ax.plot(episodes, right_values, 'r-', label=f'State {state} Right')
     
-    pltPointer.xlabel('Episode')
-    pltPointer.ylabel('Q-Value')
-    pltPointer.title('Q-Values Over Time')
-    pltPointer.legend()
-    pltPointer.grid(True)
+    ax.set_xlabel('Episode')
+    ax.set_ylabel('Q-Value')
+    ax.set_title('Q-Values Over Time')
+    ax.legend()
+    ax.grid(True)
+    
+    return fig, ax
 
 def get_best_path_length(grid_size_x, grid_size_y, start_pos, goal_pos, qtable):
     """Return the length of the best path from start_pos to goal_pos using the Q-table."""
@@ -387,12 +432,20 @@ def get_best_path_length(grid_size_x, grid_size_y, start_pos, goal_pos, qtable):
         return None
     return len(path) - 1  # Number of steps, not number of states
 
-def saveQTableAsImage(qtablewithpolicyarrows, filename="qtable_heatmap.png", start_pos=(0,0), goal_pos=None):
+def saveQTableAsImage(qtablewithpolicyarrows, filename="qtable_heatmap.png", start_pos=(0,0), goal_pos=None, fig=None, ax=None):
     """
     Save the Q-table policy as an image with arrows indicating the best action for each state.
     Arrow codes:
         1: up, 2: down, 3: left, 4: right, 0: no arrow
     The actual path from start_pos to goal_pos is shown in blue.
+    
+    Args:
+        qtablewithpolicyarrows: Dictionary containing Q-table data with policy arrows
+        filename: Output filename for the image
+        start_pos: Starting position tuple (x,y)
+        goal_pos: Goal position tuple (x,y)
+        fig: Optional matplotlib figure instance to reuse
+        ax: Optional matplotlib axes instance to reuse
     """
     if not qtablewithpolicyarrows:
         print("Q-table is empty. Nothing to plot.")
@@ -435,7 +488,13 @@ def saveQTableAsImage(qtablewithpolicyarrows, filename="qtable_heatmap.png", sta
             break
         steps_taken += 1
 
-    fig, ax = plt.subplots(figsize=(width, height))
+    # Create new figure and axes if not provided
+    if fig is None or ax is None:
+        fig, ax = plt.subplots(figsize=(width, height))
+    
+    # Clear existing content
+    ax.clear()
+    
     ax.set_xlim(min_x - 0.5, max_x + 0.5)
     ax.set_ylim(min_y - 0.5, max_y + 0.5)
     ax.set_xticks(range(min_x, max_x + 1))
@@ -465,9 +524,45 @@ def saveQTableAsImage(qtablewithpolicyarrows, filename="qtable_heatmap.png", sta
     buf = io.BytesIO()
     buf.seek(0)
     plt.savefig(buf, format='png')
-    plt.close()
     img = Image.open(buf)
 
-    return img
-    #plt.close() # todo: close the figure outside this function
+    return img, fig, ax
+
+def shouldThisEpisodeBeLogged(current_episode, total_episodes, N_IMAGE_EPISODES):
+    """
+    Determine if the current episode should be logged efficiently.
+    
+    An episode is logged if it is:
+    - The first episode (episode 0)
+    - The last episode (episode total_episodes - 1)
+    - Between other episodes, use modulo to log every nth episode ensuring total count ≤ N_IMAGE_EPISODES
+    
+    Args:
+        current_episode: Current episode number (0-indexed)
+        total_episodes: Total number of episodes
+        N_IMAGE_EPISODES: Maximum number of episodes to log
+        
+    Returns:
+        bool: True if episode should be logged, False otherwise
+    """
+    # Edge cases
+    if N_IMAGE_EPISODES <= 0 or total_episodes <= 0:
+        return False
+        
+    # If we can log all episodes, do so
+    if total_episodes <= N_IMAGE_EPISODES:
+        return True
+    
+    # Always log first episode
+    if current_episode == 0:
+        return True
+    
+    # Always log last episode
+    if current_episode == total_episodes - 1:
+        return True
+    
+    # Use simple modulo approach for efficiency
+    # Calculate step to distribute episodes evenly
+    step = max(1, total_episodes // N_IMAGE_EPISODES)
+    return current_episode % step == 0
 
