@@ -1,6 +1,6 @@
 # RL Gridworld
 
-This is a Reinforcement Learning implementation of Q-Learning in both 1D and 2D gridworld environments. Why you ask? Well, the reason is to learn. Like really learn what is going on underneath.
+This is a Reinforcement Learning implementation of Q-Learning in both 1D and 2D gridworld environments. Why you ask? Well, the reason is to learn.
 
 ## Quick Start
 
@@ -40,35 +40,12 @@ The agent implements Q-Learning with the following features:
 1. **Epsilon-greedy Exploration Strategy**:
 
    - Starts with high exploration (epsilon = 1.0)
-   - Gradually reduces exploration through epsilon decay
-   - Minimum exploration rate of 0.01 to ensure continuous learning
+   - Gradually reduces exploration through epsilon decay to 0.01
 
 2. **Q-Value Updates**:
    - Learning rate: 0.1
    - Discount factor: 0.99
-   - Updates Q-values based on rewards and next state values
-
-## Real-time Visualization
-
-The project includes rich-based real-time visualizations:
-
-1. **Progress Tracking**:
-
-   - Training progress bar
-   - Current position tracking
-   - Steps in last 10 episodes
-
-2. **Grid Display**:
-
-   - Real-time Q-value visualization
-   - Current best path display
-   - Agent position tracking
-
-3. **Learning Metrics**:
-   - Steps per episode tracking
-   - Epsilon decay visualization
-   - Q-table evolution
-
+   
 ## Weights & Biases (wandb) Integration
 
 [Weights & Biases (wandb)](https://wandb.ai/). By default, wandb logging is enabled.
@@ -86,7 +63,7 @@ pip install wandb
 ```bash
 wandb login
 ```
-3. You'll be prompted to paste your API key (found at [wandb.ai/authorize](https://wandb.ai/authorize))
+3. Find your API key at [wandb.ai/authorize](https://wandb.ai/authorize)
 
 **Step 3: Configure the project**
 - By default, wandb logging is enabled (`USE_WANDB = True` in `main.py`).
@@ -123,49 +100,6 @@ You can modify the following parameters in `main.py`:
 
 The project includes several visualization features to help understand the learning process:
 
-Future:
-
-- starting at different points in the state machine
-- having the goal be another point than the extreme state on the right.
-- allow "jumps", which may be X number of steps that can be taken together. Would be fun to see
-  how learning improves (or becomes worse) by higher values of X.
-- Add obstacles or forbidden states so the only way to reach the end would be jump over them.
-- Changing the tradeoffs between exploitation vs exploration. There are many algorithms available
-  include the infamous softmax that are used in modern LLMs too. I want to get there.
-
-## GPT Says I should try the following:
-
-1. Implement Multiple RL Algorithms
-   • Value Iteration & Policy Iteration: Understand the differences between model-based and model-free approaches.
-   • Monte Carlo Methods: Explore how sampling can be used for policy evaluation and improvement.
-   • Temporal Difference Learning: Implement SARSA and Q-learning to compare on-policy and off-policy methods.
-
-2. Introduce Function Approximation
-   • Linear Function Approximation: Replace tabular methods with linear approximators to handle larger state spaces.
-   • Neural Networks: Begin with simple feedforward networks before moving to more complex architectures.
-
-3. Experiment with Exploration Strategies
-   • Epsilon-Greedy: Analyze how varying epsilon affects learning.
-   • Softmax Action Selection: Implement and compare with epsilon-greedy.
-   • Upper Confidence Bound (UCB): Explore how optimism in the face of uncertainty can drive exploration.
-
-4. Incorporate Stochasticity
-   • Action Noise: Introduce randomness in action outcomes to simulate real-world unpredictability.
-   • Reward Noise: Add variability to rewards to study robustness.
-
-5. Visualize Learning Progress
-   • Heatmaps of State-Value Functions: Visualize how the agent's understanding of the environment evolves.
-   • Policy Arrows: Display the agent's preferred action in each state.
-
-## Requirements / Installation etc...
-
-- Python 3.x
-- Required packages (install using `pip install -r requirements.txt`):
-  - numpy
-  - matplotlib
-  - rich
-  - wandb
-
 ## Installation
 
 1. Clone the repository:
@@ -191,15 +125,15 @@ python main.py
 
 When you run the script for the first time with wandb enabled, you may be prompted to log in or create a wandb account. You can skip this if you do not wish to log online, or disable wandb logging in `main.py`.
 
-The program will:
-
-1. Initialize a 2D gridworld environment
-2. Create a Q-Learning agent with epsilon-greedy exploration
-3. Train the agent for the specified number of episodes
-4. Display real-time progress using Rich
-5. Show the final path and learning metrics
 
 ## Future Improvements
+- starting at different points in the state machine (done)
+- having the goal be another point than the extreme state on the right. (done)
+- allow "jumps", which may be X number of steps that can be taken together. Would be fun to see
+  how learning improves (or becomes worse) by higher values of X.
+- Add obstacles or forbidden states so the only way to reach the end would be jump over them.
+- Changing the tradeoffs between exploitation vs exploration. There are many algorithms available
+  include the infamous softmax that are used in modern LLMs too. I want to get there.
 
 Potential areas for future development:
 
@@ -223,9 +157,34 @@ Potential areas for future development:
    - Dueling Network Architectures
 
 4. **Visualization Improvements**:
-   - Interactive plots
-   - 3D value function visualization
+   - Interactive plots (done, using wandb)
+   - 3D value function visualization 
    - Policy heatmaps
+
+## GPT Says I should try the following:
+
+1. Implement Multiple RL Algorithms
+   • Value Iteration & Policy Iteration: Understand the differences between model-based and model-free approaches.
+   • Monte Carlo Methods: Explore how sampling can be used for policy evaluation and improvement.
+   • Temporal Difference Learning: Implement SARSA and Q-learning to compare on-policy and off-policy methods.
+
+2. Introduce Function Approximation
+   • Linear Function Approximation: Replace tabular methods with linear approximators to handle larger state spaces.
+   • Neural Networks: Begin with simple feedforward networks before moving to more complex architectures.
+
+3. Experiment with Exploration Strategies
+   • Epsilon-Greedy: Analyze how varying epsilon affects learning.
+   • Softmax Action Selection: Implement and compare with epsilon-greedy.
+   • Upper Confidence Bound (UCB): Explore how optimism in the face of uncertainty can drive exploration.
+
+4. Incorporate Stochasticity
+   • Action Noise: Introduce randomness in action outcomes to simulate real-world unpredictability.
+   • Reward Noise: Add variability to rewards to study robustness.
+
+5. Visualize Learning Progress
+   • Heatmaps of State-Value Functions: Visualize how the agent's understanding of the environment evolves.
+   • Policy Arrows: Display the agent's preferred action in each state.
+
 
 ## License
 
