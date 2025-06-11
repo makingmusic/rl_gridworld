@@ -1,20 +1,18 @@
-import io 
+from q_agent2D import QLearningAgent2D
+from gridworld2d import GridWorld2D
 import time
 import plots
 import matplotlib.pyplot as plt
-from PIL import Image
 from rich.live import Live
 from rich.progress import BarColumn, Progress, SpinnerColumn, TextColumn, MofNCompleteColumn, TimeElapsedColumn, TimeRemainingColumn, TaskProgressColumn
 from rich.console import Group, Console
 from rich.panel import Panel
-from q_agent2D import QLearningAgent2D
-from gridworld2d import GridWorld2D
 import logWandB
 import pandas as pd
 
 # wandb parameters
 USE_WANDB = True  # Set to False to disable wandb logging
-N_IMAGE_EPISODES = 100  # Number of intermediate episodes to log with image
+N_IMAGE_EPISODES = 10  # Number of intermediate episodes to log with image
 
 
 # default values for learning parameters
@@ -32,9 +30,9 @@ epsilon_decay = 0.99
 epsilon_min = 0.01
 
 # Grid Configuration Variables 
-num_episodes = 20000  # number of training episodes
-grid_size_x = 50  # width of the 2D grid
-grid_size_y = 50  # height of the 2D grid
+num_episodes = 200  # number of training episodes
+grid_size_x = 10  # width of the 2D grid
+grid_size_y = 10  # height of the 2D grid
 start_pos = (0, 0)  # starting position at bottom left
 goal_pos = (grid_size_x-1, grid_size_y-1)  # goal position at top right
 

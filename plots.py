@@ -1,7 +1,5 @@
 import io
-from rich.live     import Live
 from rich.table    import Table
-from rich.progress import BarColumn, Progress, SpinnerColumn, TextColumn, MofNCompleteColumn, TimeElapsedColumn, TimeRemainingColumn, TaskProgressColumn
 from rich.console  import Group
 from rich.panel    import Panel
 from rich.console import Console
@@ -11,6 +9,8 @@ import numpy as np
 from matplotlib import pyplot as plt
 from matplotlib.lines import Line2D
 from PIL import Image
+#from rich.live     import Live
+#from rich.progress import BarColumn, Progress, SpinnerColumn, TextColumn, MofNCompleteColumn, TimeElapsedColumn, TimeRemainingColumn, TaskProgressColumn
 
 
 def create_grid_display(grid_size_x, grid_size_y, start_pos, goal_pos, qtable):
