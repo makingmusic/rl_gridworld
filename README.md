@@ -108,6 +108,8 @@ The project includes several visualization features to help understand the learn
 
 Future:
 
+Article about DQN: https://medium.com/@sokistar24/introduction-to-deep-reinforcement-learning-solving-the-lunar-lander-c1bb0f6e6f0
+
 - starting at different points in the state machine
 - having the goal be another point than the extreme state on the right.
 - allow "jumps", which may be X number of steps that can be taken together. Would be fun to see

@@ -33,8 +33,8 @@ epsilon_min = 0.01
 
 # Grid Configuration Variables 
 num_episodes = 500  # number of training episodes
-grid_size_x = 10  # width of the 2D grid
-grid_size_y = 10  # height of the 2D grid
+grid_size_x = 20  # width of the 2D grid
+grid_size_y = 20  # height of the 2D grid
 start_pos = (0, 0)  # starting position at bottom left
 goal_pos = (grid_size_x-1, grid_size_y-1)  # goal position at top right
 
@@ -166,20 +166,14 @@ with Live(display_group, refresh_per_second=50) as live:
         if USE_WANDB:
             episode_duration = time.time() - episode_start_time
             best_path_length = plots.get_best_path_length(grid_size_x, grid_size_y, start_pos, goal_pos, agent.getQTable())
-            q_table_img = plots.saveQTableAsImage(agent.getQTableAsPolicyArrows(), filename=None, start_pos=start_pos, goal_pos=goal_pos)
-            q_table_df = pd.DataFrame.from_dict(
-                {k: v for k, v in agent.getQTable().items()},
-                orient='index'
-            )
+
             wandbconfig = {
                 "episode": episode,
                 "steps": step_count,
                 "epsilon": agent.epsilon,
                 "reward": episode_reward,
-                "q_table": logWandB.wandb.Table(dataframe=q_table_df),
                 "episode_duration": episode_duration,
                 "best_path_length": best_path_length,
-                "q_table_heatmap_img": logWandB.wandb.Image(q_table_img)
             }
             logWandB.logEpisodeWithImageControl(wandbconfig, step=episode, episode=episode, total_episodes=num_episodes, N=N_IMAGE_EPISODES)
             
