@@ -18,7 +18,8 @@ This will:
 
 After installation, you can run:
 
-- `python main.py` for the 2D grid world
+- `python main.py` for tabular Q-learning in the 2D grid world
+- `python main_nn.py` for Deep Q-Network (DQN) in the 2D grid world
 
 ## The Environment
 
@@ -45,6 +46,24 @@ The agent implements Q-Learning with the following features:
 2. **Q-Value Updates**:
    - Learning rate: 0.1
    - Discount factor: 0.99
+
+## Implementation Approaches
+
+This project offers two different Q-learning implementations:
+
+### 1. Tabular Q-Learning (`main.py`)
+- **Traditional approach** using lookup tables
+- **Fast convergence** for small state spaces
+- **Exact Q-values** stored in memory
+- **Best for**: Small grids (≤ 20x20), learning RL fundamentals
+
+### 2. Deep Q-Network - DQN (`main_nn.py`)
+- **Neural network** approximates Q-values
+- **Scalable** to large state spaces
+- **Experience replay** for stable learning
+- **Best for**: Large grids (≥ 50x50), advanced RL techniques
+
+For detailed comparison and usage guide, see [NEURAL_NETWORK_GUIDE.md](NEURAL_NETWORK_GUIDE.md).
 
 ## Weights & Biases (wandb) Integration
 
@@ -73,7 +92,9 @@ wandb login
 
 - By default, wandb logging is enabled (`USE_WANDB = True` in `main.py`).
 - If you do not wish to use wandb, set `USE_WANDB = False` in `main.py`.
-- The project will automatically create a wandb project called "rl-gridworld-qlearning"
+- Projects are logged separately:
+  - Tabular Q-learning: `rl-gridworld-qlearning`
+  - Deep Q-Network: `rl-gridworld-dqn`
 
 **Note:** If you prefer not to use wandb, simply set `USE_WANDB = False` in `main.py` and the program will run without any online logging. The local terminal visualizations using Rich are actually quite comprehensive and may be more useful for understanding the learning process than the wandb dashboard.
 
