@@ -33,6 +33,9 @@ else:
 USE_WANDB = False  # Set to False to disable wandb logging
 N_IMAGE_EPISODES = 10  # Number of intermediate episodes to log with image
 
+# Plot/display toggle
+SHOW_PLOTS = False  # Set to False to disable matplotlib and grid/path visualizations
+
 # Neural Network specific parameters
 learning_rate = 0.001  # learning rate for neural network (typically lower than tabular)
 buffer_size = 10000  # experience replay buffer size
@@ -120,9 +123,10 @@ agent = DQNAgent(
 )
 
 # Initialize matplotlib figures and axes for all visualizations
-qtable_fig, qtable_ax = plt.subplots(figsize=(grid_size_x, grid_size_y))
-steps_fig, steps_ax = plt.subplots(figsize=(8, 6))
-epsilon_fig, epsilon_ax = plt.subplots(figsize=(8, 6))
+if SHOW_PLOTS:
+    qtable_fig, qtable_ax = plt.subplots(figsize=(grid_size_x, grid_size_y))
+    steps_fig, steps_ax = plt.subplots(figsize=(8, 6))
+    epsilon_fig, epsilon_ax = plt.subplots(figsize=(8, 6))
 
 # Initialize lists to store episode and step data
 episode_data = []
@@ -131,7 +135,7 @@ epsilon_data = []
 last_ten_steps = ["0"] * 10  # Store steps (with markers) from last 10 episodes
 last_ten_steps_numeric = [0] * 10  # Numeric steps history for adaptive cap
 
-# Initialize the progress bars
+# Initialize the progress bars (always shown)
 progress = Progress(
     SpinnerColumn(),
     TextColumn("Training DQN progress:"),
@@ -169,11 +173,10 @@ stepsTask = stepsProgressBar.add_task(
     "Steps tracking", total=0, current_steps=0, max_cap=env.max_steps_per_episode
 )
 
-# Initialize grid display
+# Initialize grid/path rich tables (always)
 grid_display = plots.create_grid_display(
     grid_size_x, grid_size_y, start_pos, goal_pos, agent.getQTable()
 )
-# Ensure greedy evaluation (epsilon=0) when showing Current Best Path
 _saved_eps = agent.epsilon
 agent.epsilon = 0.0
 path_display = plots.display_actual_path(
@@ -181,11 +184,27 @@ path_display = plots.display_actual_path(
 )
 agent.epsilon = _saved_eps
 
-# Create display group with progress bars first
-display_group = Group(progress, posProgressBar, stepsProgressBar)
+# Build initial display group including tables
+grid_table = plots.grid_to_table(grid_display)
+display_group = Group(
+    progress,
+    posProgressBar,
+    stepsProgressBar,
+    Panel(Text("", style="bold magenta"), title="NN Training", border_style="magenta"),
+    Panel(grid_table, title="Grid (DQN)"),
+    Panel(path_display, title="Current Best Path"),
+)
 
 # Initialize NN training notification state
 nn_training_note = Text("", style="bold magenta")
+
+# Create base display group (textual components always shown)
+# display_group = Group(
+#     progress,
+#     posProgressBar,
+#     stepsProgressBar,
+#     Panel(nn_training_note, title="NN Training", border_style="magenta"),
+# )
 
 # Initialize wandb
 if USE_WANDB:
@@ -212,7 +231,7 @@ if USE_WANDB:
 
 with Live(
     display_group, refresh_per_second=10
-) as live:  # Reduced refresh rate for NN training
+) as live:  # Always keep textual UI active
     # Training loop
     start_time = time.time()
     for episode in range(num_episodes):
@@ -270,7 +289,7 @@ with Live(
                 max_cap=env.max_steps_per_episode,
             )
 
-            # Update grid display periodically (not every step for performance)
+            # Update grid/path rich tables periodically (not every step for performance)
             if step_count % 10 == 0 or done:
                 grid_display = plots.update_grid_display(
                     grid_display, agent.getQTable(), start_pos, goal_pos
@@ -312,14 +331,15 @@ with Live(
             best_path_length = plots.get_best_path_length(
                 grid_size_x, grid_size_y, start_pos, goal_pos, agent.getQTable()
             )
-            q_table_img, qtable_fig, qtable_ax = plots.saveQTableAsImage(
-                agent.getQTableAsPolicyArrows(),
-                filename=None,
-                start_pos=start_pos,
-                goal_pos=goal_pos,
-                fig=qtable_fig,
-                ax=qtable_ax,
-            )
+            if SHOW_PLOTS:
+                q_table_img, qtable_fig, qtable_ax = plots.saveQTableAsImage(
+                    agent.getQTableAsPolicyArrows(),
+                    filename=None,
+                    start_pos=start_pos,
+                    goal_pos=goal_pos,
+                    fig=qtable_fig,
+                    ax=qtable_ax,
+                )
             wandbconfig = {
                 "episode": episode,
                 "steps": step_count,
@@ -337,14 +357,14 @@ with Live(
                 total_episodes=num_episodes,
                 N=N_IMAGE_EPISODES,
             )
-
-            # Update plots at the end of each episode
-            steps_fig, steps_ax = plots.plotStepsPerEpisode(
-                plt, episode_data, step_data, fig=steps_fig, ax=steps_ax
-            )
-            epsilon_fig, epsilon_ax = plots.plotEpsilonDecayPerEpisode(
-                plt, episode_data, epsilon_data, fig=epsilon_fig, ax=epsilon_ax
-            )
+            if SHOW_PLOTS:
+                # Update plots at the end of each episode
+                steps_fig, steps_ax = plots.plotStepsPerEpisode(
+                    plt, episode_data, step_data, fig=steps_fig, ax=steps_ax
+                )
+                epsilon_fig, epsilon_ax = plots.plotEpsilonDecayPerEpisode(
+                    plt, episode_data, epsilon_data, fig=epsilon_fig, ax=epsilon_ax
+                )
 
         # Update last ten steps with (M) marker if episode hit max steps
         timed_out = (step_count >= env.max_steps_per_episode) and (
@@ -379,11 +399,8 @@ with Live(
         live.update(display_group)
         time.sleep(sleep_time)
 
-        # Update path display at the end of each episode
-        if (
-            episode % 50 == 0 or episode == num_episodes - 1
-        ):  # Update less frequently for performance
-            # Ensure greedy evaluation (epsilon=0) when updating Current Best Path
+        # Periodic refresh of path and grid tables (less frequent for performance)
+        if episode % 50 == 0 or episode == num_episodes - 1:
             _saved_eps = agent.epsilon
             agent.epsilon = 0.0
             path_display = plots.display_actual_path(
@@ -411,7 +428,17 @@ progress.update(task, description="DQN Training completed", completed=num_episod
 grid_display = plots.update_grid_display(
     grid_display, agent.getQTable(), start_pos, goal_pos
 )
+grid_table = plots.grid_to_table(grid_display)
+display_group = Group(
+    progress,
+    posProgressBar,
+    stepsProgressBar,
+    Panel(nn_training_note, title="NN Training", border_style="magenta"),
+    Panel(grid_table, title="Grid (DQN)"),
+    Panel(path_display, title="Current Best Path"),
+)
 live.update(display_group)
+
 print(f"DQN Training completed in {end_time - start_time:.2f} seconds")
 
 
@@ -446,7 +473,7 @@ def evaluate_agent_greedy(agent, env, grid_size_x, grid_size_y, num_episodes=5):
 # Run evaluation episodes with epsilon = 0 (greedy) and no learning
 eval_steps = evaluate_agent_greedy(agent, env, grid_size_x, grid_size_y, num_episodes=5)
 
-# Display the actual path taken by the model
+# Display the actual path taken by the model (always show text-based table)
 # Final path display under greedy policy
 _saved_eps = agent.epsilon
 agent.epsilon = 0.0
@@ -455,7 +482,7 @@ path_table = plots.display_actual_path(
 )
 agent.epsilon = _saved_eps
 
-if USE_WANDB:
+if SHOW_PLOTS and USE_WANDB:
     q_table_policyarrows = agent.getQTableAsPolicyArrows()
     q_table_img, qtable_fig, qtable_ax = plots.saveQTableAsImage(
         q_table_policyarrows,
@@ -468,10 +495,11 @@ if USE_WANDB:
     wandbconfig = {"q_table_heatmap_img": logWandB.wandb.Image(q_table_img)}
     logWandB.logEpisode(wandbconfig, step=num_episodes - 1)
 
-# Clean up all matplotlib figures
-plt.close(qtable_fig)
-plt.close(steps_fig)
-plt.close(epsilon_fig)
+if SHOW_PLOTS:
+    # Clean up all matplotlib figures
+    plt.close(qtable_fig)
+    plt.close(steps_fig)
+    plt.close(epsilon_fig)
 
 console = Console()
 console.print("\nActual path taken by the DQN model:")
@@ -480,13 +508,14 @@ console.print(Panel(path_table, title="Path"))
 if USE_WANDB:
     logWandB.closeWandB()
 
-# Plot final visualizations
-steps_fig, steps_ax = plots.plotStepsPerEpisode(
-    plt, episode_data, step_data, fig=steps_fig, ax=steps_ax
-)
-epsilon_fig, epsilon_ax = plots.plotEpsilonDecayPerEpisode(
-    plt, episode_data, epsilon_data, fig=epsilon_fig, ax=epsilon_ax
-)
+if SHOW_PLOTS:
+    # Plot final visualizations
+    steps_fig, steps_ax = plots.plotStepsPerEpisode(
+        plt, episode_data, step_data, fig=steps_fig, ax=steps_ax
+    )
+    epsilon_fig, epsilon_ax = plots.plotEpsilonDecayPerEpisode(
+        plt, episode_data, epsilon_data, fig=epsilon_fig, ax=epsilon_ax
+    )
 
 # Print final Q-table approximation for debugging
 # print("\nFinal Q-Table approximation from DQN:")
