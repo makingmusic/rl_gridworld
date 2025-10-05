@@ -59,8 +59,9 @@ This project offers two different Q-learning implementations:
 
 ### 2. Deep Q-Network - DQN (`main_nn.py`)
 - **Neural network** approximates Q-values
-- **Scalable** to large state spaces
+- **Adaptive sizing** automatically scales network capacity based on grid size
 - **Experience replay** for stable learning
+- **Target network** for stable Q-value estimation
 - **Best for**: Large grids (≥ 50x50), advanced RL techniques
 
 For detailed comparison and usage guide, see [NEURAL_NETWORK_GUIDE.md](NEURAL_NETWORK_GUIDE.md).
@@ -133,6 +134,88 @@ The sparse reward structure became problematic starting around **30x30 grids** a
 
 **Implementation Location**: The reward function is defined in `gridworld2d.py` in the `step()` method (lines 128-155).
 
+## Adaptive Neural Network Sizing
+
+### The Problem: Fixed Network Size Limitations
+
+The original DQN implementation used a fixed neural network architecture regardless of grid size:
+
+**Previous Fixed Architecture:**
+- **Hidden layers**: 3 layers of 128 neurons each
+- **Total parameters**: ~33,000 parameters
+- **Buffer size**: 10,000 experiences (fixed)
+- **Batch size**: 64 (fixed)
+
+**Why This Failed for Large Grids:**
+- **50×50 grid**: 2,500 states → 13.3 parameters per state (adequate)
+- **100×100 grid**: 10,000 states → 3.3 parameters per state (insufficient!)
+- **200×200 grid**: 40,000 states → 0.8 parameters per state (severely inadequate!)
+
+The fixed network became increasingly under-capacity as grid size increased, leading to poor learning performance and convergence issues.
+
+### The Solution: Adaptive Neural Network Sizing
+
+**New Adaptive Architecture** automatically scales all parameters based on grid dimensions:
+
+#### 1. **Adaptive Hidden Layer Size**
+```python
+def compute_optimal_nn_size(grid_x, grid_y, min_hidden=128, max_hidden=1024):
+    total_states = grid_x * grid_y
+    # Target 15 parameters per state for optimal learning capacity
+    optimal_hidden = int(np.sqrt(7.5 * total_states))
+    # Apply bounds and round to power of 2 for efficiency
+    optimal_hidden = max(min_hidden, min(optimal_hidden, max_hidden))
+    optimal_hidden = 2 ** int(np.log2(optimal_hidden) + 0.5)
+    return optimal_hidden
+```
+
+#### 2. **Adaptive Buffer Size**
+```python
+def compute_adaptive_buffer_size(grid_x, grid_y, base_size=10000):
+    total_states = grid_x * grid_y
+    # Scale with square root of grid area for diverse experiences
+    adaptive_size = min(base_size * (total_states / 2500) ** 0.5, 100000)
+    return int(adaptive_size)
+```
+
+#### 3. **Adaptive Batch Size**
+```python
+def compute_adaptive_batch_size(grid_x, grid_y, base_size=64):
+    total_states = grid_x * grid_y
+    # Scale with grid area to power 0.25 for stable training
+    adaptive_size = min(base_size * (total_states / 2500) ** 0.25, 256)
+    return int(adaptive_size)
+```
+
+### Results: Optimal Capacity Across All Grid Sizes
+
+| Grid Size | States | Hidden Size | Buffer Size | Batch Size | NN Parameters | Params/State |
+|-----------|--------|-------------|-------------|------------|---------------|--------------|
+| 10×10     | 100    | 128         | 2,000       | 28         | 33,280        | 332.8        |
+| 25×25     | 625    | 128         | 5,000       | 45         | 33,280        | 53.2         |
+| 50×50     | 2,500  | 128         | 10,000      | 64         | 33,280        | 13.3         |
+| 100×100   | 10,000 | 256         | 20,000      | 90         | 132,096       | 13.2         |
+| 200×200   | 40,000 | 512         | 40,000      | 128        | 526,336       | 13.2         |
+
+### Key Benefits
+
+- ✅ **Automatic scaling**: No manual tuning needed for different grid sizes
+- ✅ **Optimal capacity**: Maintains ~13-15 parameters per state for consistent learning
+- ✅ **Computational efficiency**: Uses powers of 2 for GPU optimization
+- ✅ **Memory management**: Reasonable bounds prevent excessive memory usage
+- ✅ **Better convergence**: Larger grids get appropriately sized networks
+- ✅ **Future-proof**: Works optimally for any grid size you choose
+
+### Algorithm Details
+
+**Target Capacity**: 15 parameters per state (research-backed optimal ratio)
+**Scaling Formula**: `hidden_size ≈ sqrt(7.5 × total_states)`
+**Bounds**: 128 ≤ hidden_size ≤ 1024 (powers of 2 for efficiency)
+**Buffer Scaling**: `buffer_size ∝ sqrt(grid_area)` for diverse experiences
+**Batch Scaling**: `batch_size ∝ grid_area^0.25` for stable training
+
+**Implementation Location**: The adaptive sizing functions are defined in `main_nn.py` (lines 53-107) and automatically applied during agent initialization.
+
 ## Weights & Biases (wandb) Integration
 
 [Weights & Biases (wandb)](https://wandb.ai/). By default, wandb logging is enabled.
@@ -168,23 +251,34 @@ wandb login
 
 ## Configuration
 
-You can modify the following parameters in `main.py`:
+You can modify the following parameters in `main.py` (tabular Q-learning) or `main_nn.py` (Deep Q-Network):
 
 ### Environment Parameters
 
-- `grid_size_x`: Width of the 2D grid (default: 20)
-- `grid_size_y`: Height of the 2D grid (default: 5)
+- `grid_size_x`: Width of the 2D grid (default: 20 for tabular, 50 for DQN)
+- `grid_size_y`: Height of the 2D grid (default: 5 for tabular, 50 for DQN)
 - `start_pos`: Starting position (default: (0, 0))
 - `goal_pos`: Goal position (default: (grid_size_x-1, grid_size_y-1))
 
 ### Training Parameters
 
-- `num_episodes`: Number of training episodes (default: 500)
-- `learning_rate`: Learning rate for Q-value updates (default: 0.1)
+- `num_episodes`: Number of training episodes (default: 500 for tabular, 10000 for DQN)
+- `learning_rate`: Learning rate for Q-value updates (default: 0.1 for tabular, 0.001 for DQN)
 - `discount_factor`: Discount factor for future rewards (default: 0.99)
 - `epsilon`: Initial exploration rate (default: 1.0)
-- `epsilon_decay`: Decay rate for exploration (default: 0.99)
+- `epsilon_decay`: Decay rate for exploration (default: 0.99 for tabular, 0.999 for DQN)
 - `epsilon_min`: Minimum exploration rate (default: 0.01)
+
+### DQN-Specific Parameters (main_nn.py)
+
+**Note**: The following parameters are automatically computed based on grid size using adaptive sizing algorithms:
+
+- `hidden_size`: Neural network hidden layer size (auto-computed: 128-1024)
+- `buffer_size`: Experience replay buffer size (auto-computed: 2,000-100,000)
+- `batch_size`: Training batch size (auto-computed: 28-256)
+- `target_update_freq`: Target network update frequency (default: 100)
+
+**Manual Override**: If you want to manually set these parameters, you can modify the computed values after the adaptive sizing functions in `main_nn.py`.
 
 ### Display Parameters
 

@@ -49,7 +49,62 @@ learning_rate = 0.001  # learning rate for neural network (typically lower than 
 buffer_size = 10000  # experience replay buffer size
 batch_size = 64  # batch size for neural network training
 target_update_freq = 100  # frequency to update target network
-hidden_size = 128  # size of hidden layers
+
+def compute_optimal_nn_size(grid_x, grid_y, min_hidden=128, max_hidden=1024):
+    """
+    Compute optimal neural network hidden layer size based on grid dimensions.
+    
+    Algorithm:
+    1. Calculate total state space (grid_x * grid_y)
+    2. Target 10-20 parameters per state for good learning capacity
+    3. Scale hidden size to achieve this ratio
+    4. Apply reasonable bounds to avoid extremely large/small networks
+    
+    Args:
+        grid_x (int): Grid width
+        grid_y (int): Grid height  
+        min_hidden (int): Minimum hidden layer size
+        max_hidden (int): Maximum hidden layer size
+        
+    Returns:
+        int: Optimal hidden layer size
+    """
+    total_states = grid_x * grid_y
+    
+    # Target 15 parameters per state (balanced approach)
+    # For a 3-layer network: 2*h + h*h + h*h + h*4 ≈ 2*h^2 parameters
+    # Solving: 2*h^2 ≈ 15 * total_states
+    # h ≈ sqrt(7.5 * total_states)
+    target_params_per_state = 15
+    optimal_hidden = int(np.sqrt(7.5 * total_states))
+    
+    # Apply bounds
+    optimal_hidden = max(min_hidden, min(optimal_hidden, max_hidden))
+    
+    # Round to nearest power of 2 for computational efficiency
+    optimal_hidden = 2 ** int(np.log2(optimal_hidden) + 0.5)
+    
+    return optimal_hidden
+
+def compute_adaptive_buffer_size(grid_x, grid_y, base_size=10000):
+    """
+    Compute optimal replay buffer size based on grid dimensions.
+    Larger grids need more diverse experiences for good learning.
+    """
+    total_states = grid_x * grid_y
+    # Scale buffer size with grid area, but cap it reasonably
+    adaptive_size = min(base_size * (total_states / 2500) ** 0.5, 100000)
+    return int(adaptive_size)
+
+def compute_adaptive_batch_size(grid_x, grid_y, base_size=64):
+    """
+    Compute optimal batch size based on grid dimensions.
+    Larger grids can benefit from larger batches for more stable learning.
+    """
+    total_states = grid_x * grid_y
+    # Scale batch size with grid area, but keep it reasonable
+    adaptive_size = min(base_size * (total_states / 2500) ** 0.25, 256)
+    return int(adaptive_size)
 
 # Q-learning parameters
 discount_factor = 0.99  # discount factor for future rewards
@@ -60,10 +115,23 @@ exploration_strategy = "epsilon_greedy"
 
 # Grid Configuration Variables
 num_episodes = 10000  # number of training episodes (more episodes for NN)
-grid_size_x = 100  # width of the 2D grid
-grid_size_y = 100  # height of the 2D grid
+grid_size_x = 50  # width of the 2D grid
+grid_size_y = 50  # height of the 2D grid
 start_pos = (0, 0)  # starting position at bottom left
 goal_pos = (grid_size_x - 1, grid_size_y - 1)  # goal position at top right
+
+# Compute adaptive neural network parameters based on grid size
+hidden_size = compute_optimal_nn_size(grid_size_x, grid_size_y)
+buffer_size = compute_adaptive_buffer_size(grid_size_x, grid_size_y)
+batch_size = compute_adaptive_batch_size(grid_size_x, grid_size_y)
+
+# Display computed parameters
+print(f"Grid size: {grid_size_x}x{grid_size_y} ({grid_size_x * grid_size_y} states)")
+print(f"Computed NN hidden size: {hidden_size}")
+print(f"Computed buffer size: {buffer_size}")
+print(f"Computed batch size: {batch_size}")
+print(f"Estimated NN parameters: ~{2 * hidden_size**2 + hidden_size * 4}")
+print(f"Parameters per state: ~{(2 * hidden_size**2 + hidden_size * 4) / (grid_size_x * grid_size_y):.1f}")
 
 
 def compute_max_steps(grid_x, grid_y, epsilon, recent_steps=None):
@@ -263,6 +331,11 @@ if USE_WANDB:
         "target_update_freq": target_update_freq,
         "hidden_size": hidden_size,
         "device": str(agent.device),
+        # Additional computed parameters for analysis
+        "total_states": grid_size_x * grid_size_y,
+        "estimated_nn_parameters": 2 * hidden_size**2 + hidden_size * 4,
+        "parameters_per_state": (2 * hidden_size**2 + hidden_size * 4) / (grid_size_x * grid_size_y),
+        "adaptive_sizing": True,
     }
     logWandB.initWandB("rl-gridworld-dqn", config=wandbconfig)
 
