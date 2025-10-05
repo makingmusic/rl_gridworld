@@ -36,6 +36,11 @@ N_IMAGE_EPISODES = 10  # Number of intermediate episodes to log with image
 # Plot/display toggle
 SHOW_PLOTS = False  # Set to False to disable matplotlib and grid/path visualizations
 
+# Display/refresh controls
+# Reduce terminal UI refresh frequency and NN forward-pass cadence for grid/path tables
+LIVE_REFRESH_PER_SECOND = 1  # e.g., 1-5; lower = fewer UI redraws
+DISPLAY_STEP_INTERVAL = 10000  # steps between NN-driven display updates; set 0/None to disable per-step updates
+
 # Neural Network specific parameters
 learning_rate = 0.001  # learning rate for neural network (typically lower than tabular)
 buffer_size = 10000  # experience replay buffer size
@@ -51,9 +56,9 @@ epsilon_min = 0.01  # minimum exploration rate
 exploration_strategy = "epsilon_greedy"
 
 # Grid Configuration Variables
-num_episodes = 1000  # number of training episodes (more episodes for NN)
-grid_size_x = 30  # width of the 2D grid
-grid_size_y = 30  # height of the 2D grid
+num_episodes = 3000  # number of training episodes (more episodes for NN)
+grid_size_x = 40  # width of the 2D grid
+grid_size_y = 40  # height of the 2D grid
 start_pos = (0, 0)  # starting position at bottom left
 goal_pos = (grid_size_x - 1, grid_size_y - 1)  # goal position at top right
 
@@ -230,7 +235,7 @@ if USE_WANDB:
     logWandB.initWandB("rl-gridworld-dqn", config=wandbconfig)
 
 with Live(
-    display_group, refresh_per_second=10
+    display_group, refresh_per_second=LIVE_REFRESH_PER_SECOND
 ) as live:  # Always keep textual UI active
     # Training loop
     start_time = time.time()
@@ -290,9 +295,17 @@ with Live(
             )
 
             # Update grid/path rich tables periodically (not every step for performance)
-            if step_count % 10 == 0 or done:
+            should_update_display = (
+                bool(DISPLAY_STEP_INTERVAL)
+                and DISPLAY_STEP_INTERVAL > 0
+                and (step_count % DISPLAY_STEP_INTERVAL == 0)
+            ) or done
+
+            if should_update_display:
+                # Cache Q-table once per update to avoid duplicate forward passes
+                qtable_cached = agent.getQTable()
                 grid_display = plots.update_grid_display(
-                    grid_display, agent.getQTable(), start_pos, goal_pos
+                    grid_display, qtable_cached, start_pos, goal_pos
                 )
                 grid_table = plots.grid_to_table(grid_display)
 
@@ -311,7 +324,7 @@ with Live(
                             grid_size_y,
                             start_pos,
                             goal_pos,
-                            agent.getQTable(),
+                            qtable_cached,
                         ),
                         title="Current Best Path",
                     ),
