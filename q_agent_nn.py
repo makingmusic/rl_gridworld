@@ -110,6 +110,9 @@ class DQNAgent:
         self.batch_size = batch_size
         self.target_update_freq = target_update_freq
         self.training_step = 0
+        # Track number of NN training runs and a one-shot flag for UI updates
+        self.training_runs = 0
+        self.just_trained = False
 
         # Set device
         if device is not None:
@@ -162,6 +165,9 @@ class DQNAgent:
 
     def _train(self):
         """Train the Q-network using a batch from experience replay."""
+        # Mark a new training run for display and counters
+        self.training_runs += 1
+        self.just_trained = True
         # Sample batch from memory
         states, actions, rewards, next_states, dones = self.memory.sample(
             self.batch_size
@@ -272,25 +278,18 @@ class DQNAgent:
         return q_table_policyarrows
 
     def print_q_table(self):
-        """Print approximated Q-table for debugging."""
-        print("\nApproximated Q-Table from Neural Network:")
-        print("State (x,y) | Up    | Down   | Left   | Right | Action")
-        print("-" * 74)
+        """Print the greedy policy implied by the neural network (best action per state)."""
+        print("\nPolicy from Neural Network (greedy):")
+        print("State (x,y) | Action")
+        print("-" * 32)
 
-        q_table = self.getQTable()
-        sorted_states = sorted(q_table.keys())
-
-        for state in sorted_states:
-            actions = q_table[state]
-            state_str = f"({state[0]},{state[1]})"
-            up_val = f"{actions['up']:.3f}"
-            down_val = f"{actions['down']:.3f}"
-            left_val = f"{actions['left']:.3f}"
-            right_val = f"{actions['right']:.3f}"
-
-            # Choose final decision (best action by Q-value)
-            best_action = max(actions, key=actions.get)
-
-            print(
-                f"{state_str:10} | {up_val:6} | {down_val:6} | {left_val:6} | {right_val:6} | {best_action:6}"
-            )
+        with torch.no_grad():
+            for x in range(self.grid_size_x):
+                for y in range(self.grid_size_y):
+                    state = (x, y)
+                    state_tensor = self.state_to_tensor(state)
+                    q_values = self.q_network(state_tensor)
+                    best_idx = q_values.argmax(dim=1).item()
+                    best_action = self.idx_to_action[best_idx]
+                    state_str = f"({state[0]},{state[1]})"
+                    print(f"{state_str:10} | {best_action:6}")

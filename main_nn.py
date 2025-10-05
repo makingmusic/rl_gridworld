@@ -16,6 +16,7 @@ from rich.progress import (
 )
 from rich.console import Group, Console
 from rich.panel import Panel
+from rich.text import Text
 import logWandB
 import torch
 import numpy as np
@@ -33,7 +34,7 @@ USE_WANDB = False  # Set to False to disable wandb logging
 N_IMAGE_EPISODES = 10  # Number of intermediate episodes to log with image
 
 # Neural Network specific parameters
-learning_rate = 0.1  # learning rate for neural network (typically lower than tabular)
+learning_rate = 0.001  # learning rate for neural network (typically lower than tabular)
 buffer_size = 10000  # experience replay buffer size
 batch_size = 32  # batch size for neural network training
 target_update_freq = 100  # frequency to update target network
@@ -47,9 +48,9 @@ epsilon_min = 0.01  # minimum exploration rate
 exploration_strategy = "epsilon_greedy"
 
 # Grid Configuration Variables
-num_episodes = 10  # number of training episodes (more episodes for NN)
-grid_size_x = 4  # width of the 2D grid
-grid_size_y = 4  # height of the 2D grid
+num_episodes = 100  # number of training episodes (more episodes for NN)
+grid_size_x = 8  # width of the 2D grid
+grid_size_y = 8  # height of the 2D grid
 start_pos = (0, 0)  # starting position at bottom left
 goal_pos = (grid_size_x - 1, grid_size_y - 1)  # goal position at top right
 
@@ -142,6 +143,9 @@ path_display = plots.display_actual_path(
 # Create display group with progress bars first
 display_group = Group(progress, posProgressBar, stepsProgressBar)
 
+# Initialize NN training notification state
+nn_training_note = Text("", style="bold magenta")
+
 # Initialize wandb
 if USE_WANDB:
     wandbconfig = {
@@ -185,6 +189,15 @@ with Live(
             step_count += 1
             episode_reward += reward
 
+            # If a NN training just occurred, update the main display note
+            if getattr(agent, "just_trained", False):
+                nn_training_note = Text(
+                    f"NN training triggered (total: {agent.training_runs})",
+                    style="bold magenta",
+                )
+                # reset the flag so message is only refreshed on new trainings
+                agent.just_trained = False
+
             # Update position progress bar
             current_pos = env.get_state()
             pos_value = current_pos[0] * grid_size_y + current_pos[1]
@@ -207,6 +220,9 @@ with Live(
                     progress,
                     posProgressBar,
                     stepsProgressBar,
+                    Panel(
+                        nn_training_note, title="NN Training", border_style="magenta"
+                    ),
                     Panel(grid_table, title="Grid (DQN)"),
                     Panel(path_display, title="Current Best Path"),
                 )
@@ -301,6 +317,7 @@ with Live(
                 progress,
                 posProgressBar,
                 stepsProgressBar,
+                Panel(nn_training_note, title="NN Training", border_style="magenta"),
                 Panel(grid_table, title="Grid (DQN)"),
                 Panel(path_display, title="Current Best Path"),
             )
@@ -315,6 +332,38 @@ grid_display = plots.update_grid_display(
 )
 live.update(display_group)
 print(f"DQN Training completed in {end_time - start_time:.2f} seconds")
+
+
+def evaluate_agent_greedy(agent, env, grid_size_x, grid_size_y, num_episodes=5):
+    """
+    Evaluate the agent with epsilon=0 (greedy policy) and no learning.
+    Returns a list of steps taken per episode.
+    """
+    saved_epsilon = agent.epsilon
+    agent.epsilon = 0.0
+    eval_steps = []
+    max_steps = grid_size_x * grid_size_y * 4  # Safety cap to avoid infinite loops
+
+    for _ in range(num_episodes):
+        state = env.reset()
+        done = False
+        steps_taken = 0
+        while not done and steps_taken < max_steps:
+            action = agent.choose_action(state)
+            next_state, _, done = env.step(action)
+            state = next_state
+            steps_taken += 1
+        eval_steps.append(steps_taken)
+
+    agent.epsilon = saved_epsilon
+    print(
+        f"Evaluation with epsilon=0 → steps per episode: {eval_steps} | avg: {np.mean(eval_steps):.2f}"
+    )
+    return eval_steps
+
+
+# Run evaluation episodes with epsilon = 0 (greedy) and no learning
+eval_steps = evaluate_agent_greedy(agent, env, grid_size_x, grid_size_y, num_episodes=5)
 
 # Display the actual path taken by the model
 path_table = plots.display_actual_path(
@@ -358,7 +407,7 @@ epsilon_fig, epsilon_ax = plots.plotEpsilonDecayPerEpisode(
 print("\nFinal Q-Table approximation from DQN:")
 agent.print_q_table()
 
-print(f"\nFinal training statistics:")
+print("\nFinal training statistics:")
 print(f"Total episodes: {num_episodes}")
 print(f"Final epsilon: {agent.epsilon:.4f}")
 print(f"Final replay buffer size: {len(agent.memory)}")
