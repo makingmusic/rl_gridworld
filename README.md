@@ -122,6 +122,16 @@ You can modify the following parameters in `main.py`:
 
 - `sleep_time`: Time to pause between episodes (default: 0)
 
+### Episode Step Cap
+
+To prevent episodes from wandering too long under high exploration, the environment enforces a `max_steps_per_episode` cap:
+
+- In the environment (`gridworld2d.py`): `GridWorld2D` accepts `max_steps_per_episode` and terminates the episode with a small timeout penalty when exceeded.
+- In the tabular script (`main.py`): configure `max_steps_per_episode` in the Grid Configuration section and it is passed to `GridWorld2D`.
+- In the DQN script (`main_nn.py`): `max_steps_per_episode` is computed by `compute_max_steps(grid_x, grid_y, epsilon)` which scales with Manhattan distance and grid area, with an optional adaptive mode based on recent episode lengths.
+
+Display note: The steps summary shows entries like `42(M)` in "Steps in last 10 episodes:" when an episode ends by hitting the max step cap.
+
 ## Visualization Features
 
 The project includes several visualization features to help understand the learning process:

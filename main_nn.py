@@ -36,23 +36,56 @@ N_IMAGE_EPISODES = 10  # Number of intermediate episodes to log with image
 # Neural Network specific parameters
 learning_rate = 0.001  # learning rate for neural network (typically lower than tabular)
 buffer_size = 10000  # experience replay buffer size
-batch_size = 32  # batch size for neural network training
+batch_size = 64  # batch size for neural network training
 target_update_freq = 100  # frequency to update target network
 hidden_size = 128  # size of hidden layers
 
 # Q-learning parameters
 discount_factor = 0.99  # discount factor for future rewards
 epsilon = 1.0  # initial exploration rate
-epsilon_decay = 0.995  # decay rate for exploration (slower decay for NN)
+epsilon_decay = 0.999  # decay rate for exploration (slower decay for NN)
 epsilon_min = 0.01  # minimum exploration rate
 exploration_strategy = "epsilon_greedy"
 
 # Grid Configuration Variables
-num_episodes = 100  # number of training episodes (more episodes for NN)
-grid_size_x = 8  # width of the 2D grid
-grid_size_y = 8  # height of the 2D grid
+num_episodes = 1000  # number of training episodes (more episodes for NN)
+grid_size_x = 30  # width of the 2D grid
+grid_size_y = 30  # height of the 2D grid
 start_pos = (0, 0)  # starting position at bottom left
 goal_pos = (grid_size_x - 1, grid_size_y - 1)  # goal position at top right
+
+
+def compute_max_steps(grid_x, grid_y, epsilon, recent_steps=None):
+    short_cut = 50 * (grid_x + grid_y)
+    D = (grid_x - 1) + (grid_y - 1)
+    area = grid_x * grid_y
+    c_area = 2.0
+    max_limit = 30 * (grid_x + grid_y)
+
+    # Adaptive branch when recent history is available
+    if recent_steps is not None and len(recent_steps) > 0:
+        # Use a robust statistic (75th percentile) to avoid outliers growing the cap
+        try:
+            p75 = float(np.percentile(recent_steps, 75))
+        except Exception:
+            p75 = sum(recent_steps) / len(recent_steps)
+        cap = max(2 * D, 1.2 * p75)
+        cap = min(cap, c_area * area)
+        cap = min(cap, max_limit)
+        return int(short_cut)
+        # return int(cap)
+
+    # Epsilon-aware default
+    k0, k_eps = 2.0, 4.0
+    cap = D * (k0 + k_eps * epsilon)
+
+    # Clamp within [2D, c_area * area]
+    cap = min(max(cap, 2 * D), c_area * area)
+    cap = min(cap, max_limit)
+    return int(cap)
+
+
+max_steps_per_episode = compute_max_steps(grid_size_x, grid_size_y, epsilon)
 
 # display parameters
 sleep_time = 0  # time to sleep between episodes
@@ -66,6 +99,7 @@ env = GridWorld2D(
     grid_size_y=grid_size_y,
     start_pos=start_pos,
     end_pos=goal_pos,
+    max_steps_per_episode=max_steps_per_episode,
 )
 
 agent = DQNAgent(
@@ -94,7 +128,8 @@ epsilon_fig, epsilon_ax = plt.subplots(figsize=(8, 6))
 episode_data = []
 step_data = []
 epsilon_data = []
-last_ten_steps = [0] * 10  # Store steps from last 10 episodes
+last_ten_steps = ["0"] * 10  # Store steps (with markers) from last 10 episodes
+last_ten_steps_numeric = [0] * 10  # Numeric steps history for adaptive cap
 
 # Initialize the progress bars
 progress = Progress(
@@ -124,21 +159,27 @@ posTask = posProgressBar.add_task(
 # Add steps progress bar
 stepsProgressBar = Progress(
     SpinnerColumn(),
-    TextColumn("Steps in last 10 episodes:"),
+    TextColumn("Steps in last 10 episodes ({task.fields[max_cap]}):"),
     TextColumn("[bold blue]{task.description}"),
     TextColumn(" | Current:"),
     TextColumn("[bold green]{task.fields[current_steps]}"),
     transient=True,
 )
-stepsTask = stepsProgressBar.add_task("Steps tracking", total=0, current_steps=0)
+stepsTask = stepsProgressBar.add_task(
+    "Steps tracking", total=0, current_steps=0, max_cap=env.max_steps_per_episode
+)
 
 # Initialize grid display
 grid_display = plots.create_grid_display(
     grid_size_x, grid_size_y, start_pos, goal_pos, agent.getQTable()
 )
+# Ensure greedy evaluation (epsilon=0) when showing Current Best Path
+_saved_eps = agent.epsilon
+agent.epsilon = 0.0
 path_display = plots.display_actual_path(
     grid_size_x, grid_size_y, start_pos, goal_pos, agent.getQTable()
 )
+agent.epsilon = _saved_eps
 
 # Create display group with progress bars first
 display_group = Group(progress, posProgressBar, stepsProgressBar)
@@ -175,6 +216,23 @@ with Live(
     # Training loop
     start_time = time.time()
     for episode in range(num_episodes):
+        # Recompute adaptive max steps using recent numeric history and current epsilon
+        # Make the cap non-increasing to avoid positive feedback loops
+        try:
+            adaptive_cap = compute_max_steps(
+                grid_size_x,
+                grid_size_y,
+                agent.epsilon,
+                recent_steps=last_ten_steps_numeric,
+            )
+        except Exception:
+            adaptive_cap = compute_max_steps(grid_size_x, grid_size_y, agent.epsilon)
+
+        if episode == 0 or getattr(env, "max_steps_per_episode", None) is None:
+            env.max_steps_per_episode = adaptive_cap
+        else:
+            env.max_steps_per_episode = min(env.max_steps_per_episode, adaptive_cap)
+
         state = env.reset()
         done = False
         step_count = 0
@@ -204,9 +262,12 @@ with Live(
             posProgressBar.update(posTask, completed=pos_value)
 
             # Update steps progress bar
-            steps_str = " | ".join(str(steps) for steps in last_ten_steps)
+            steps_str = " | ".join(last_ten_steps)
             stepsProgressBar.update(
-                stepsTask, description=steps_str, current_steps=step_count
+                stepsTask,
+                description=steps_str,
+                current_steps=step_count,
+                max_cap=env.max_steps_per_episode,
             )
 
             # Update grid display periodically (not every step for performance)
@@ -224,7 +285,17 @@ with Live(
                         nn_training_note, title="NN Training", border_style="magenta"
                     ),
                     Panel(grid_table, title="Grid (DQN)"),
-                    Panel(path_display, title="Current Best Path"),
+                    # Recompute Current Best Path greedily (epsilon=0)
+                    Panel(
+                        plots.display_actual_path(
+                            grid_size_x,
+                            grid_size_y,
+                            start_pos,
+                            goal_pos,
+                            agent.getQTable(),
+                        ),
+                        title="Current Best Path",
+                    ),
                 )
                 live.update(display_group)
 
@@ -275,9 +346,15 @@ with Live(
                 plt, episode_data, epsilon_data, fig=epsilon_fig, ax=epsilon_ax
             )
 
-        # Update last ten steps
-        last_ten_steps.pop(0)  # Remove oldest step count
-        last_ten_steps.append(step_count)  # Add current step count
+        # Update last ten steps with (M) marker if episode hit max steps
+        timed_out = (step_count >= env.max_steps_per_episode) and (
+            not env.is_terminal()
+        )
+        # Update numeric and display histories
+        last_ten_steps_numeric.pop(0)
+        last_ten_steps_numeric.append(step_count)
+        last_ten_steps.pop(0)
+        last_ten_steps.append(f"{step_count}{'(M)' if timed_out else ''}")
 
         # Get the Q-table for this episode (approximate from neural network)
         qtable = agent.getQTable()
@@ -306,9 +383,13 @@ with Live(
         if (
             episode % 50 == 0 or episode == num_episodes - 1
         ):  # Update less frequently for performance
+            # Ensure greedy evaluation (epsilon=0) when updating Current Best Path
+            _saved_eps = agent.epsilon
+            agent.epsilon = 0.0
             path_display = plots.display_actual_path(
                 grid_size_x, grid_size_y, start_pos, goal_pos, agent.getQTable()
             )
+            agent.epsilon = _saved_eps
             grid_display = plots.update_grid_display(
                 grid_display, agent.getQTable(), start_pos, goal_pos
             )
@@ -366,9 +447,13 @@ def evaluate_agent_greedy(agent, env, grid_size_x, grid_size_y, num_episodes=5):
 eval_steps = evaluate_agent_greedy(agent, env, grid_size_x, grid_size_y, num_episodes=5)
 
 # Display the actual path taken by the model
+# Final path display under greedy policy
+_saved_eps = agent.epsilon
+agent.epsilon = 0.0
 path_table = plots.display_actual_path(
     grid_size_x, grid_size_y, start_pos, goal_pos, agent.getQTable()
 )
+agent.epsilon = _saved_eps
 
 if USE_WANDB:
     q_table_policyarrows = agent.getQTableAsPolicyArrows()
@@ -404,8 +489,8 @@ epsilon_fig, epsilon_ax = plots.plotEpsilonDecayPerEpisode(
 )
 
 # Print final Q-table approximation for debugging
-print("\nFinal Q-Table approximation from DQN:")
-agent.print_q_table()
+# print("\nFinal Q-Table approximation from DQN:")
+# agent.print_q_table()
 
 print("\nFinal training statistics:")
 print(f"Total episodes: {num_episodes}")
