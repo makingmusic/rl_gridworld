@@ -252,6 +252,9 @@ class DQNAgent:
                 for y in range(self.grid_size_y):
                     state = (x, y)
                     state_tensor = self.state_to_tensor(state)
+                    # It returns the output of the network's final layer,
+                    # which is a tensor containing the Q-values for each action,
+                    # computed from the input state using the network's learned weights.
                     q_values = self.q_network(state_tensor).squeeze().cpu().numpy()
 
                     # Find best action
@@ -271,8 +274,8 @@ class DQNAgent:
     def print_q_table(self):
         """Print approximated Q-table for debugging."""
         print("\nApproximated Q-Table from Neural Network:")
-        print("State (x,y) | Up    | Down  | Left  | Right")
-        print("-" * 50)
+        print("State (x,y) | Up    | Down   | Left   | Right | Action")
+        print("-" * 74)
 
         q_table = self.getQTable()
         sorted_states = sorted(q_table.keys())
@@ -285,6 +288,9 @@ class DQNAgent:
             left_val = f"{actions['left']:.3f}"
             right_val = f"{actions['right']:.3f}"
 
+            # Choose final decision (best action by Q-value)
+            best_action = max(actions, key=actions.get)
+
             print(
-                f"{state_str:10} | {up_val:6} | {down_val:6} | {left_val:6} | {right_val:6}"
+                f"{state_str:10} | {up_val:6} | {down_val:6} | {left_val:6} | {right_val:6} | {best_action:6}"
             )

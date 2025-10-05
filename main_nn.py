@@ -17,7 +17,6 @@ from rich.progress import (
 from rich.console import Group, Console
 from rich.panel import Panel
 import logWandB
-import pandas as pd
 import torch
 import numpy as np
 
@@ -30,7 +29,7 @@ else:
     device = torch.device("cpu")
 
 # wandb parameters
-USE_WANDB = True  # Set to False to disable wandb logging
+USE_WANDB = False  # Set to False to disable wandb logging
 N_IMAGE_EPISODES = 10  # Number of intermediate episodes to log with image
 
 # Neural Network specific parameters
@@ -48,9 +47,9 @@ epsilon_min = 0.01  # minimum exploration rate
 exploration_strategy = "epsilon_greedy"
 
 # Grid Configuration Variables
-num_episodes = 100  # number of training episodes (more episodes for NN)
-grid_size_x = 10  # width of the 2D grid
-grid_size_y = 10  # height of the 2D grid
+num_episodes = 10  # number of training episodes (more episodes for NN)
+grid_size_x = 4  # width of the 2D grid
+grid_size_y = 4  # height of the 2D grid
 start_pos = (0, 0)  # starting position at bottom left
 goal_pos = (grid_size_x - 1, grid_size_y - 1)  # goal position at top right
 
@@ -94,7 +93,6 @@ epsilon_fig, epsilon_ax = plt.subplots(figsize=(8, 6))
 episode_data = []
 step_data = []
 epsilon_data = []
-qtable_data = []
 last_ten_steps = [0] * 10  # Store steps from last 10 episodes
 
 # Initialize the progress bars
@@ -173,7 +171,6 @@ with Live(
     # Training loop
     start_time = time.time()
     for episode in range(num_episodes):
-        qtable_data.append(episode)
         state = env.reset()
         done = False
         step_count = 0
@@ -236,9 +233,6 @@ with Live(
                 fig=qtable_fig,
                 ax=qtable_ax,
             )
-            q_table_df = pd.DataFrame.from_dict(
-                {k: v for k, v in agent.getQTable().items()}, orient="index"
-            )
             wandbconfig = {
                 "episode": episode,
                 "steps": step_count,
@@ -279,7 +273,6 @@ with Live(
                 "left": actions["left"],
                 "right": actions["right"],
             }
-        qtable_data.append(episode_qtable)
 
         # Decay exploration rate at end of episode
         agent.decay_epsilon()
