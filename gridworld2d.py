@@ -125,21 +125,30 @@ class GridWorld2D:
         # Increment step count after resolving movement
         self.steps_since_reset += 1
 
-        # Determine reward
+        # Determine reward with grid-size-aware scaling
         if next_pos == self.end_pos:
-            reward = 1.0  # reached goal
+            # Scale goal reward with grid area to ensure it outweighs step penalties
+            # Goal reward should be at least 2x the maximum possible step penalty
+            max_possible_steps = self.max_steps_per_episode
+            max_step_penalty = max_possible_steps * 0.01  # Base step penalty
+            reward = max(10.0, 2.0 * max_step_penalty)  # Ensure goal reward is substantial
         else:
-            reward = (
-                -0.005
-            )  # small negative reward for each step to encourage efficiency
+            # Scale step penalty inversely with grid size to prevent over-penalization
+            # For larger grids, use smaller per-step penalties
+            base_penalty = 0.01
+            grid_area = self.grid_size_x * self.grid_size_y
+            # Scale penalty: smaller grids get higher penalties, larger grids get lower penalties
+            scaled_penalty = base_penalty * (100.0 / grid_area) ** 0.5  # Square root scaling
+            reward = -scaled_penalty
 
         # Check if episode is done by reaching goal or exceeding max steps
         if next_pos == self.end_pos:
             done = True
         elif self.steps_since_reset >= self.max_steps_per_episode:
             done = True
-            # apply small penalty for timing out to discourage wandering
-            reward = -0.02
+            # Apply timeout penalty proportional to grid size
+            timeout_penalty = max(0.1, 0.01 * (self.grid_size_x + self.grid_size_y))
+            reward = -timeout_penalty
         else:
             done = False
 
