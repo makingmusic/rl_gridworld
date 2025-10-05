@@ -40,6 +40,9 @@ SHOW_PLOTS = False  # Set to False to disable matplotlib and grid/path visualiza
 # Reduce terminal UI refresh frequency and NN forward-pass cadence for grid/path tables
 LIVE_REFRESH_PER_SECOND = 1  # e.g., 1-5; lower = fewer UI redraws
 DISPLAY_STEP_INTERVAL = 10000  # steps between NN-driven display updates; set 0/None to disable per-step updates
+LEARNING_ACHIEVED_THRESHOLD = (
+    5  # number of consecutive optimal episodes to confirm learning
+)
 
 # Neural Network specific parameters
 learning_rate = 0.001  # learning rate for neural network (typically lower than tabular)
@@ -56,9 +59,9 @@ epsilon_min = 0.01  # minimum exploration rate
 exploration_strategy = "epsilon_greedy"
 
 # Grid Configuration Variables
-num_episodes = 3000  # number of training episodes (more episodes for NN)
-grid_size_x = 40  # width of the 2D grid
-grid_size_y = 40  # height of the 2D grid
+num_episodes = 10000  # number of training episodes (more episodes for NN)
+grid_size_x = 100  # width of the 2D grid
+grid_size_y = 100  # height of the 2D grid
 start_pos = (0, 0)  # starting position at bottom left
 goal_pos = (grid_size_x - 1, grid_size_y - 1)  # goal position at top right
 
@@ -140,6 +143,19 @@ epsilon_data = []
 last_ten_steps = ["0"] * 10  # Store steps (with markers) from last 10 episodes
 last_ten_steps_numeric = [0] * 10  # Numeric steps history for adaptive cap
 
+# Learning detection variables
+optimal_path_length = (
+    grid_size_x + grid_size_y - 1
+)  # Manhattan distance from start to goal
+consecutive_optimal_episodes = 0  # Track consecutive episodes with optimal path
+learning_achieved_episode = None  # Episode when learning was first achieved
+learning_detection_threshold = LEARNING_ACHIEVED_THRESHOLD
+
+# Display control for large grids
+SHOW_GRID_DISPLAYS = (
+    grid_size_x * grid_size_y
+) <= 1000  # Hide grid displays for large grids
+
 # Initialize the progress bars (always shown)
 progress = Progress(
     SpinnerColumn(),
@@ -178,30 +194,46 @@ stepsTask = stepsProgressBar.add_task(
     "Steps tracking", total=0, current_steps=0, max_cap=env.max_steps_per_episode
 )
 
-# Initialize grid/path rich tables (always)
-grid_display = plots.create_grid_display(
-    grid_size_x, grid_size_y, start_pos, goal_pos, agent.getQTable()
-)
-_saved_eps = agent.epsilon
-agent.epsilon = 0.0
-path_display = plots.display_actual_path(
-    grid_size_x, grid_size_y, start_pos, goal_pos, agent.getQTable()
-)
-agent.epsilon = _saved_eps
-
-# Build initial display group including tables
-grid_table = plots.grid_to_table(grid_display)
-display_group = Group(
-    progress,
-    posProgressBar,
-    stepsProgressBar,
-    Panel(Text("", style="bold magenta"), title="NN Training", border_style="magenta"),
-    Panel(grid_table, title="Grid (DQN)"),
-    Panel(path_display, title="Current Best Path"),
-)
+# Initialize grid/path rich tables (only for small grids)
+grid_display = None
+path_display = None
+if SHOW_GRID_DISPLAYS:
+    grid_display = plots.create_grid_display(
+        grid_size_x, grid_size_y, start_pos, goal_pos, agent.getQTable()
+    )
+    _saved_eps = agent.epsilon
+    agent.epsilon = 0.0
+    path_display = plots.display_actual_path(
+        grid_size_x, grid_size_y, start_pos, goal_pos, agent.getQTable()
+    )
+    agent.epsilon = _saved_eps
 
 # Initialize NN training notification state
 nn_training_note = Text("", style="bold magenta")
+
+# Initialize learning progress notification
+learning_progress_note = Text("", style="bold green")
+
+# Build initial display group including tables
+display_components = [
+    progress,
+    posProgressBar,
+    stepsProgressBar,
+    Panel(nn_training_note, title="NN Training", border_style="magenta"),
+    Panel(learning_progress_note, title="Learning Progress", border_style="green"),
+]
+
+# Add grid displays only for small grids
+if SHOW_GRID_DISPLAYS:
+    grid_table = plots.grid_to_table(grid_display)
+    display_components.extend(
+        [
+            Panel(grid_table, title="Grid (DQN)"),
+            Panel(path_display, title="Current Best Path"),
+        ]
+    )
+
+display_group = Group(*display_components)
 
 # Create base display group (textual components always shown)
 # display_group = Group(
@@ -304,37 +336,93 @@ with Live(
             if should_update_display:
                 # Cache Q-table once per update to avoid duplicate forward passes
                 qtable_cached = agent.getQTable()
-                grid_display = plots.update_grid_display(
-                    grid_display, qtable_cached, start_pos, goal_pos
-                )
-                grid_table = plots.grid_to_table(grid_display)
 
-                display_group = Group(
+                display_components = [
                     progress,
                     posProgressBar,
                     stepsProgressBar,
                     Panel(
                         nn_training_note, title="NN Training", border_style="magenta"
                     ),
-                    Panel(grid_table, title="Grid (DQN)"),
-                    # Recompute Current Best Path greedily (epsilon=0)
                     Panel(
-                        plots.display_actual_path(
-                            grid_size_x,
-                            grid_size_y,
-                            start_pos,
-                            goal_pos,
-                            qtable_cached,
-                        ),
-                        title="Current Best Path",
+                        learning_progress_note,
+                        title="Learning Progress",
+                        border_style="green",
                     ),
-                )
+                ]
+
+                # Add grid displays only for small grids
+                if SHOW_GRID_DISPLAYS and grid_display is not None:
+                    grid_display = plots.update_grid_display(
+                        grid_display, qtable_cached, start_pos, goal_pos
+                    )
+                    grid_table = plots.grid_to_table(grid_display)
+                    display_components.extend(
+                        [
+                            Panel(grid_table, title="Grid (DQN)"),
+                            # Recompute Current Best Path greedily (epsilon=0)
+                            Panel(
+                                plots.display_actual_path(
+                                    grid_size_x,
+                                    grid_size_y,
+                                    start_pos,
+                                    goal_pos,
+                                    qtable_cached,
+                                ),
+                                title="Current Best Path",
+                            ),
+                        ]
+                    )
+
+                display_group = Group(*display_components)
                 live.update(display_group)
 
         # Store episode and step data
         episode_data.append(episode)
         step_data.append(step_count)
         epsilon_data.append(agent.epsilon)
+
+        # Learning detection: Check if agent achieved optimal path
+        if not done:  # Episode didn't complete successfully
+            consecutive_optimal_episodes = 0  # Reset counter if episode didn't complete
+        else:
+            # Check if the path taken was optimal
+            best_path_length = plots.get_best_path_length(
+                grid_size_x, grid_size_y, start_pos, goal_pos, agent.getQTable()
+            )
+
+            if best_path_length is not None and best_path_length <= optimal_path_length:
+                consecutive_optimal_episodes += 1
+                if learning_achieved_episode is None:
+                    learning_achieved_episode = episode
+            else:
+                consecutive_optimal_episodes = 0  # Reset counter if path wasn't optimal
+
+        # Update learning progress display
+        if learning_achieved_episode is not None:
+            learning_progress_note = Text(
+                f"First learning achieved at episode {learning_achieved_episode + 1} | "
+                f"Consecutive optimal: {consecutive_optimal_episodes}/{learning_detection_threshold}",
+                style="bold green",
+            )
+        else:
+            learning_progress_note = Text(
+                f"Consecutive optimal episodes: {consecutive_optimal_episodes}/{learning_detection_threshold} | "
+                f"Target: {optimal_path_length} steps",
+                style="bold yellow",
+            )
+
+        # Early stopping: Check if learning has been achieved
+        if consecutive_optimal_episodes >= learning_detection_threshold:
+            print("\n🎉 LEARNING ACHIEVED! 🎉")
+            print("Neural network successfully learned the optimal path!")
+            print(
+                f"First Learning achieved at episode: {learning_achieved_episode + 1}"
+            )
+            print(f"Consecutive optimal episodes: {consecutive_optimal_episodes}")
+            print(f"Optimal path length: {optimal_path_length} steps")
+            print(f"Training stopped early after {episode + 1} episodes")
+            break
 
         # Log metrics to wandb
         if USE_WANDB and plots.shouldThisEpisodeBeLogged(
@@ -414,42 +502,67 @@ with Live(
 
         # Periodic refresh of path and grid tables (less frequent for performance)
         if episode % 50 == 0 or episode == num_episodes - 1:
-            _saved_eps = agent.epsilon
-            agent.epsilon = 0.0
-            path_display = plots.display_actual_path(
-                grid_size_x, grid_size_y, start_pos, goal_pos, agent.getQTable()
-            )
-            agent.epsilon = _saved_eps
-            grid_display = plots.update_grid_display(
-                grid_display, agent.getQTable(), start_pos, goal_pos
-            )
-            grid_table = plots.grid_to_table(grid_display)
-            display_group = Group(
+            display_components = [
                 progress,
                 posProgressBar,
                 stepsProgressBar,
                 Panel(nn_training_note, title="NN Training", border_style="magenta"),
-                Panel(grid_table, title="Grid (DQN)"),
-                Panel(path_display, title="Current Best Path"),
-            )
+                Panel(
+                    learning_progress_note,
+                    title="Learning Progress",
+                    border_style="green",
+                ),
+            ]
+
+            # Add grid displays only for small grids
+            if SHOW_GRID_DISPLAYS and grid_display is not None:
+                _saved_eps = agent.epsilon
+                agent.epsilon = 0.0
+                path_display = plots.display_actual_path(
+                    grid_size_x, grid_size_y, start_pos, goal_pos, agent.getQTable()
+                )
+                agent.epsilon = _saved_eps
+                grid_display = plots.update_grid_display(
+                    grid_display, agent.getQTable(), start_pos, goal_pos
+                )
+                grid_table = plots.grid_to_table(grid_display)
+                display_components.extend(
+                    [
+                        Panel(grid_table, title="Grid (DQN)"),
+                        Panel(path_display, title="Current Best Path"),
+                    ]
+                )
+
+            display_group = Group(*display_components)
             live.update(display_group)
 
     end_time = time.time()
 
 # Final display update to show completion
 progress.update(task, description="DQN Training completed", completed=num_episodes)
-grid_display = plots.update_grid_display(
-    grid_display, agent.getQTable(), start_pos, goal_pos
-)
-grid_table = plots.grid_to_table(grid_display)
-display_group = Group(
+
+display_components = [
     progress,
     posProgressBar,
     stepsProgressBar,
     Panel(nn_training_note, title="NN Training", border_style="magenta"),
-    Panel(grid_table, title="Grid (DQN)"),
-    Panel(path_display, title="Current Best Path"),
-)
+    Panel(learning_progress_note, title="Learning Progress", border_style="green"),
+]
+
+# Add grid displays only for small grids
+if SHOW_GRID_DISPLAYS and grid_display is not None:
+    grid_display = plots.update_grid_display(
+        grid_display, agent.getQTable(), start_pos, goal_pos
+    )
+    grid_table = plots.grid_to_table(grid_display)
+    display_components.extend(
+        [
+            Panel(grid_table, title="Grid (DQN)"),
+            Panel(path_display, title="Current Best Path"),
+        ]
+    )
+
+display_group = Group(*display_components)
 live.update(display_group)
 
 print(f"DQN Training completed in {end_time - start_time:.2f} seconds")
@@ -535,11 +648,29 @@ if SHOW_PLOTS:
 # agent.print_q_table()
 
 print("\nFinal training statistics:")
-print(f"Total episodes: {num_episodes}")
+print(f"Total episodes: {len(episode_data)}")
 print(f"Final epsilon: {agent.epsilon:.4f}")
 print(f"Final replay buffer size: {len(agent.memory)}")
 print(f"Total training steps: {agent.training_step}")
 print(f"Average steps per episode (last 100): {np.mean(step_data[-100:]):.2f}")
+
+# Learning achievement reporting
+if learning_achieved_episode is not None:
+    print("\n🎯 LEARNING ACHIEVEMENT SUMMARY:")
+    print("✅ Neural network successfully learned the optimal path!")
+    print(f"📊 Learning achieved at episode: {learning_achieved_episode + 1}")
+    print(f"📈 Consecutive optimal episodes achieved: {consecutive_optimal_episodes}")
+    print(f"🎯 Optimal path length: {optimal_path_length} steps")
+    print(
+        f"⏱️  Training completed in {len(episode_data)} episodes (out of {num_episodes} planned)"
+    )
+else:
+    print("\n❌ LEARNING NOT ACHIEVED:")
+    print(
+        f"Neural network did not achieve optimal path in {len(episode_data)} episodes"
+    )
+    print(f"Optimal path length target: {optimal_path_length} steps")
+    print(f"Final consecutive optimal episodes: {consecutive_optimal_episodes}")
 
 # Plot steps per episode : Uncomment this section to see the steps per episode
 # plots.plotStepsPerEpisode(plt, episode_data, step_data)
