@@ -2,6 +2,8 @@
 
 This is a Reinforcement Learning implementation of Q-Learning in both 1D and 2D gridworld environments. Why you ask? Well, the reason is to learn.
 
+Note2Self: 100x100 grid trained in about 2 hours on an M3 Mac / 24 Gb. Need to do more benchmarking / profiling. So much time is wasted in just measuring while training. Measuring ought to occur on a separate machine i I really want to do this properly.
+
 ## Quick Start
 
 To get started immediately, simply run this command in your terminal:

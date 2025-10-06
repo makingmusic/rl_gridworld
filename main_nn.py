@@ -115,8 +115,8 @@ exploration_strategy = "epsilon_greedy"
 
 # Grid Configuration Variables
 num_episodes = 10000  # number of training episodes (more episodes for NN)
-grid_size_x = 50  # width of the 2D grid
-grid_size_y = 50  # height of the 2D grid
+grid_size_x = 100  # width of the 2D grid
+grid_size_y = 100  # height of the 2D grid
 start_pos = (0, 0)  # starting position at bottom left
 goal_pos = (grid_size_x - 1, grid_size_y - 1)  # goal position at top right
 
