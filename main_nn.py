@@ -1,5 +1,5 @@
 from q_agent_nn import DQNAgent
-from gridworld2d import GridWorld2D
+from gridworld2d import GridWorld2D, generate_solvable_maze, a_star_pathfinding
 import time
 import plots
 import matplotlib.pyplot as plt
@@ -59,10 +59,14 @@ exploration_strategy = "epsilon_greedy"
 
 # Grid Configuration Variables
 num_episodes = 10000  # number of training episodes (more episodes for NN)
-grid_size_x = 10  # width of the 2D grid
-grid_size_y = 10  # height of the 2D grid
+grid_size_x = 100  # width of the 2D grid
+grid_size_y = 100  # height of the 2D grid
 start_pos = (0, 0)  # starting position at bottom left
 goal_pos = (grid_size_x - 1, grid_size_y - 1)  # goal position at top right
+
+# Obstacle Configuration
+USE_OBSTACLES = True  # Set to True to enable obstacles
+OBSTACLE_DENSITY = 0.15  # Fraction of cells to fill with obstacles (0.0 to 1.0)
 
 
 def compute_optimal_nn_size(grid_x, grid_y, min_hidden=128, max_hidden=1024):
@@ -174,6 +178,27 @@ sleep_time = 0  # time to sleep between episodes
 print("Initializing Deep Q-Network Agent...")
 print(f"Using device: {device}")
 
+# Generate obstacles if enabled
+obstacles = set()
+optimal_path_length = None
+if USE_OBSTACLES:
+    print(f"Generating solvable maze with {OBSTACLE_DENSITY*100:.1f}% obstacle density...")
+    obstacles = generate_solvable_maze(
+        grid_size_x, grid_size_y, start_pos, goal_pos, 
+        obstacle_density=OBSTACLE_DENSITY
+    )
+    print(f"Generated {len(obstacles)} obstacles")
+    
+    # Compute optimal path length using A*
+    optimal_path_length, optimal_path = a_star_pathfinding(
+        grid_size_x, grid_size_y, start_pos, goal_pos, obstacles
+    )
+    print(f"Optimal path length: {optimal_path_length} steps")
+else:
+    # No obstacles - optimal path is Manhattan distance
+    optimal_path_length = (grid_size_x - 1) + (grid_size_y - 1)
+    print(f"No obstacles - optimal path length: {optimal_path_length} steps")
+
 # Initialize environment and agent
 env = GridWorld2D(
     grid_size_x=grid_size_x,
@@ -181,6 +206,7 @@ env = GridWorld2D(
     start_pos=start_pos,
     end_pos=goal_pos,
     max_steps_per_episode=max_steps_per_episode,
+    obstacles=obstacles,
 )
 
 agent = DQNAgent(
@@ -212,11 +238,17 @@ step_data = []
 epsilon_data = []
 last_ten_steps = ["0"] * 10  # Store steps (with markers) from last 10 episodes
 last_ten_steps_numeric = [0] * 10  # Numeric steps history for adaptive cap
+last_ten_rewards = ["0.00"] * 10  # Store rewards from last 10 episodes
+last_ten_rewards_numeric = [0.0] * 10  # Numeric rewards history
+
+# Initialize tracking variables for obstacle metrics
+success_count = 0  # Number of successful episodes
+wall_hit_count = 0  # Number of wall hits
+total_wall_hits = 0  # Total wall hits across all episodes
+total_returns = 0.0  # Total returns across all episodes
+suboptimality_ratios = []  # List of suboptimality ratios per episode
 
 # Learning detection variables
-optimal_path_length = (
-    grid_size_x + grid_size_y - 1
-)  # Manhattan distance from start to goal
 consecutive_optimal_episodes = 0  # Track consecutive episodes with optimal path
 learning_achieved_episode = None  # Episode when learning was first achieved
 learning_detection_threshold = LEARNING_ACHIEVED_THRESHOLD
@@ -264,17 +296,30 @@ stepsTask = stepsProgressBar.add_task(
     "Steps tracking", total=0, current_steps=0, max_cap=env.max_steps_per_episode
 )
 
+# Add rewards progress bar
+rewardsProgressBar = Progress(
+    SpinnerColumn(),
+    TextColumn("Rewards in last 10 episodes:"),
+    TextColumn("[bold blue]{task.description}"),
+    TextColumn(" | Current:"),
+    TextColumn("[bold green]{task.fields[current_reward]}"),
+    transient=True,
+)
+rewardsTask = rewardsProgressBar.add_task(
+    "Rewards tracking", total=0, current_reward=0.0
+)
+
 # Initialize grid/path rich tables (only for small grids)
 grid_display = None
 path_display = None
 if SHOW_GRID_DISPLAYS:
     grid_display = plots.create_grid_display(
-        grid_size_x, grid_size_y, start_pos, goal_pos, agent.getQTable()
+        grid_size_x, grid_size_y, start_pos, goal_pos, agent.getQTable(), obstacles
     )
     _saved_eps = agent.epsilon
     agent.epsilon = 0.0
     path_display = plots.display_actual_path(
-        grid_size_x, grid_size_y, start_pos, goal_pos, agent.getQTable()
+        grid_size_x, grid_size_y, start_pos, goal_pos, agent.getQTable(), obstacles
     )
     agent.epsilon = _saved_eps
 
@@ -284,13 +329,18 @@ nn_training_note = Text("", style="bold magenta")
 # Initialize learning progress notification
 learning_progress_note = Text("", style="bold green")
 
+# Initialize reward display notification
+reward_display_note = Text("", style="bold cyan")
+
 # Build initial display group including tables
 display_components = [
     progress,
     posProgressBar,
     stepsProgressBar,
+    rewardsProgressBar,
     Panel(nn_training_note, title="NN Training", border_style="magenta"),
     Panel(learning_progress_note, title="Learning Progress", border_style="green"),
+    Panel(reward_display_note, title="Episode Reward", border_style="cyan"),
 ]
 
 # Add grid displays only for small grids
@@ -338,6 +388,11 @@ if USE_WANDB:
         "estimated_nn_parameters": 2 * hidden_size**2 + hidden_size * 4,
         "parameters_per_state": (2 * hidden_size**2 + hidden_size * 4) / (grid_size_x * grid_size_y),
         "adaptive_sizing": True,
+        # Obstacle parameters
+        "use_obstacles": USE_OBSTACLES,
+        "obstacle_density": OBSTACLE_DENSITY,
+        "num_obstacles": len(obstacles),
+        "optimal_path_length": optimal_path_length,
     }
     logWandB.initWandB("rl-gridworld-dqn", config=wandbconfig)
 
@@ -369,10 +424,17 @@ with Live(
         step_count = 0
         episode_reward = 0
         episode_start_time = time.time()  # Track episode start time
+        episode_wall_hits = 0  # Track wall hits in this episode
 
         while not done:
             action = agent.choose_action(state)
             next_state, reward, done = env.step(action)
+            
+            # Track wall hits (when agent stays in same position and gets negative reward)
+            if next_state == state and reward < 0:
+                episode_wall_hits += 1
+                total_wall_hits += 1
+            
             agent.update_q_value(state, action, reward, next_state, done)
             state = next_state
             step_count += 1
@@ -401,6 +463,14 @@ with Live(
                 max_cap=env.max_steps_per_episode,
             )
 
+            # Update rewards progress bar
+            rewards_str = " | ".join(last_ten_rewards)
+            rewardsProgressBar.update(
+                rewardsTask,
+                description=rewards_str,
+                current_reward=episode_reward,
+            )
+
             # Update grid/path rich tables periodically (not every step for performance)
             should_update_display = (
                 bool(DISPLAY_STEP_INTERVAL)
@@ -416,6 +486,7 @@ with Live(
                     progress,
                     posProgressBar,
                     stepsProgressBar,
+                    rewardsProgressBar,
                     Panel(
                         nn_training_note, title="NN Training", border_style="magenta"
                     ),
@@ -424,12 +495,17 @@ with Live(
                         title="Learning Progress",
                         border_style="green",
                     ),
+                    Panel(
+                        reward_display_note,
+                        title="Episode Reward",
+                        border_style="cyan",
+                    ),
                 ]
 
                 # Add grid displays only for small grids
                 if SHOW_GRID_DISPLAYS and grid_display is not None:
                     grid_display = plots.update_grid_display(
-                        grid_display, qtable_cached, start_pos, goal_pos
+                        grid_display, qtable_cached, start_pos, goal_pos, obstacles
                     )
                     grid_table = plots.grid_to_table(grid_display)
                     display_components.extend(
@@ -443,6 +519,7 @@ with Live(
                                     start_pos,
                                     goal_pos,
                                     qtable_cached,
+                                    obstacles,
                                 ),
                                 title="Current Best Path",
                             ),
@@ -456,14 +533,28 @@ with Live(
         episode_data.append(episode)
         step_data.append(step_count)
         epsilon_data.append(agent.epsilon)
+        
+        # Track success and metrics
+        episode_success = done and env.is_terminal()
+        if episode_success:
+            success_count += 1
+        
+        total_returns += episode_reward
+        
+        # Calculate suboptimality ratio
+        if episode_success and optimal_path_length is not None:
+            suboptimality_ratio = step_count / optimal_path_length
+            suboptimality_ratios.append(suboptimality_ratio)
+        else:
+            suboptimality_ratios.append(None)
 
         # Learning detection: Check if agent achieved optimal path
-        if not done:  # Episode didn't complete successfully
+        if not episode_success:  # Episode didn't complete successfully
             consecutive_optimal_episodes = 0  # Reset counter if episode didn't complete
         else:
             # Check if the path taken was optimal
             best_path_length = plots.get_best_path_length(
-                grid_size_x, grid_size_y, start_pos, goal_pos, agent.getQTable()
+                grid_size_x, grid_size_y, start_pos, goal_pos, agent.getQTable(), obstacles
             )
 
             if best_path_length is not None and best_path_length <= optimal_path_length:
@@ -487,6 +578,14 @@ with Live(
                 style="bold yellow",
             )
 
+        # Update reward display
+        reward_display_note = Text(
+            f"Episode {episode + 1} Reward: {episode_reward:.2f} | "
+            f"Total Steps: {step_count} | "
+            f"Success: {'Yes' if episode_success else 'No'}",
+            style="bold cyan",
+        )
+
         # Early stopping: Check if learning has been achieved
         if consecutive_optimal_episodes >= learning_detection_threshold:
             print("\n🎉 LEARNING ACHIEVED! 🎉")
@@ -505,7 +604,7 @@ with Live(
         ):
             episode_duration = time.time() - episode_start_time
             best_path_length = plots.get_best_path_length(
-                grid_size_x, grid_size_y, start_pos, goal_pos, agent.getQTable()
+                grid_size_x, grid_size_y, start_pos, goal_pos, agent.getQTable(), obstacles
             )
             if SHOW_PLOTS:
                 q_table_img, qtable_fig, qtable_ax = plots.saveQTableAsImage(
@@ -516,6 +615,14 @@ with Live(
                     fig=qtable_fig,
                     ax=qtable_ax,
                 )
+            
+            # Calculate metrics
+            success_rate = success_count / (episode + 1)
+            mean_steps = np.mean(step_data) if step_data else 0
+            wall_hit_rate = total_wall_hits / (episode + 1) if episode > 0 else 0
+            mean_return = total_returns / (episode + 1) if episode > 0 else 0
+            current_suboptimality = suboptimality_ratios[-1] if suboptimality_ratios and suboptimality_ratios[-1] is not None else None
+            
             wandbconfig = {
                 "episode": episode,
                 "steps": step_count,
@@ -525,6 +632,13 @@ with Live(
                 "best_path_length": best_path_length,
                 "replay_buffer_size": len(agent.memory),
                 "training_step": agent.training_step,
+                "success_rate": success_rate,
+                "mean_steps": mean_steps,
+                "wall_hit_rate": wall_hit_rate,
+                "mean_return": mean_return,
+                "suboptimality_ratio": current_suboptimality,
+                "episode_wall_hits": episode_wall_hits,
+                "optimal_path_length": optimal_path_length,
             }
             logWandB.logEpisodeWithImageControl(
                 wandbconfig,
@@ -551,6 +665,12 @@ with Live(
         last_ten_steps_numeric.append(step_count)
         last_ten_steps.pop(0)
         last_ten_steps.append(f"{step_count}{'(M)' if timed_out else ''}")
+        
+        # Update reward histories
+        last_ten_rewards_numeric.pop(0)
+        last_ten_rewards_numeric.append(episode_reward)
+        last_ten_rewards.pop(0)
+        last_ten_rewards.append(f"{episode_reward:.2f}")
 
         # Get the Q-table for this episode (approximate from neural network)
         qtable = agent.getQTable()
@@ -576,11 +696,17 @@ with Live(
                 progress,
                 posProgressBar,
                 stepsProgressBar,
+                rewardsProgressBar,
                 Panel(nn_training_note, title="NN Training", border_style="magenta"),
                 Panel(
                     learning_progress_note,
                     title="Learning Progress",
                     border_style="green",
+                ),
+                Panel(
+                    reward_display_note,
+                    title="Episode Reward",
+                    border_style="cyan",
                 ),
             ]
 
@@ -589,11 +715,11 @@ with Live(
                 _saved_eps = agent.epsilon
                 agent.epsilon = 0.0
                 path_display = plots.display_actual_path(
-                    grid_size_x, grid_size_y, start_pos, goal_pos, agent.getQTable()
+                    grid_size_x, grid_size_y, start_pos, goal_pos, agent.getQTable(), obstacles
                 )
                 agent.epsilon = _saved_eps
                 grid_display = plots.update_grid_display(
-                    grid_display, agent.getQTable(), start_pos, goal_pos
+                    grid_display, agent.getQTable(), start_pos, goal_pos, obstacles
                 )
                 grid_table = plots.grid_to_table(grid_display)
                 display_components.extend(
@@ -615,14 +741,16 @@ display_components = [
     progress,
     posProgressBar,
     stepsProgressBar,
+    rewardsProgressBar,
     Panel(nn_training_note, title="NN Training", border_style="magenta"),
     Panel(learning_progress_note, title="Learning Progress", border_style="green"),
+    Panel(reward_display_note, title="Episode Reward", border_style="cyan"),
 ]
 
 # Add grid displays only for small grids
 if SHOW_GRID_DISPLAYS and grid_display is not None:
     grid_display = plots.update_grid_display(
-        grid_display, agent.getQTable(), start_pos, goal_pos
+        grid_display, agent.getQTable(), start_pos, goal_pos, obstacles
     )
     grid_table = plots.grid_to_table(grid_display)
     display_components.extend(
@@ -674,7 +802,7 @@ eval_steps = evaluate_agent_greedy(agent, env, grid_size_x, grid_size_y, num_epi
 _saved_eps = agent.epsilon
 agent.epsilon = 0.0
 path_table = plots.display_actual_path(
-    grid_size_x, grid_size_y, start_pos, goal_pos, agent.getQTable()
+    grid_size_x, grid_size_y, start_pos, goal_pos, agent.getQTable(), obstacles
 )
 agent.epsilon = _saved_eps
 
@@ -723,6 +851,24 @@ print(f"Final epsilon: {agent.epsilon:.4f}")
 print(f"Final replay buffer size: {len(agent.memory)}")
 print(f"Total training steps: {agent.training_step}")
 print(f"Average steps per episode (last 100): {np.mean(step_data[-100:]):.2f}")
+
+# Obstacle-specific metrics
+if USE_OBSTACLES:
+    print(f"\nObstacle Navigation Metrics:")
+    print(f"Success rate: {success_count / len(episode_data) * 100:.1f}%")
+    print(f"Mean steps per episode: {np.mean(step_data):.2f}")
+    print(f"Wall hit rate: {total_wall_hits / len(episode_data):.2f} hits per episode")
+    print(f"Mean return per episode: {total_returns / len(episode_data):.2f}")
+    print(f"Optimal path length: {optimal_path_length} steps")
+    
+    # Calculate mean suboptimality ratio for successful episodes
+    successful_suboptimality = [ratio for ratio in suboptimality_ratios if ratio is not None]
+    if successful_suboptimality:
+        mean_suboptimality = np.mean(successful_suboptimality)
+        print(f"Mean suboptimality ratio: {mean_suboptimality:.2f} (agent_steps / optimal_steps)")
+        print(f"Best suboptimality ratio: {min(successful_suboptimality):.2f}")
+    else:
+        print("No successful episodes to calculate suboptimality ratio")
 
 # Learning achievement reporting
 if learning_achieved_episode is not None:
