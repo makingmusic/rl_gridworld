@@ -50,6 +50,21 @@ buffer_size = 10000  # experience replay buffer size
 batch_size = 64  # batch size for neural network training
 target_update_freq = 100  # frequency to update target network
 
+# Q-learning parameters
+discount_factor = 0.99  # discount factor for future rewards
+epsilon = 1.0  # initial exploration rate
+epsilon_decay = 0.999  # decay rate for exploration (slower decay for NN)
+epsilon_min = 0.01  # minimum exploration rate
+exploration_strategy = "epsilon_greedy"
+
+# Grid Configuration Variables
+num_episodes = 10000  # number of training episodes (more episodes for NN)
+grid_size_x = 10  # width of the 2D grid
+grid_size_y = 10  # height of the 2D grid
+start_pos = (0, 0)  # starting position at bottom left
+goal_pos = (grid_size_x - 1, grid_size_y - 1)  # goal position at top right
+
+
 def compute_optimal_nn_size(grid_x, grid_y, min_hidden=128, max_hidden=1024):
     """
     Compute optimal neural network hidden layer size based on grid dimensions.
@@ -106,19 +121,6 @@ def compute_adaptive_batch_size(grid_x, grid_y, base_size=64):
     adaptive_size = min(base_size * (total_states / 2500) ** 0.25, 256)
     return int(adaptive_size)
 
-# Q-learning parameters
-discount_factor = 0.99  # discount factor for future rewards
-epsilon = 1.0  # initial exploration rate
-epsilon_decay = 0.999  # decay rate for exploration (slower decay for NN)
-epsilon_min = 0.01  # minimum exploration rate
-exploration_strategy = "epsilon_greedy"
-
-# Grid Configuration Variables
-num_episodes = 10000  # number of training episodes (more episodes for NN)
-grid_size_x = 100  # width of the 2D grid
-grid_size_y = 100  # height of the 2D grid
-start_pos = (0, 0)  # starting position at bottom left
-goal_pos = (grid_size_x - 1, grid_size_y - 1)  # goal position at top right
 
 # Compute adaptive neural network parameters based on grid size
 hidden_size = compute_optimal_nn_size(grid_size_x, grid_size_y)
@@ -552,14 +554,9 @@ with Live(
 
         # Get the Q-table for this episode (approximate from neural network)
         qtable = agent.getQTable()
-        episode_qtable = {}
-        for state, actions in qtable.items():
-            episode_qtable[state] = {
-                "up": actions["up"],
-                "down": actions["down"],
-                "left": actions["left"],
-                "right": actions["right"],
-            }
+#        episode_qtable = {}
+#        for state, actions in qtable.items():
+#            episode_qtable[state] = {"up": actions["up"], "down": actions["down"], "left": actions["left"], "right": actions["right"],}
 
         # Decay exploration rate at end of episode
         agent.decay_epsilon()
