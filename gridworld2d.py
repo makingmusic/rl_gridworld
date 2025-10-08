@@ -151,13 +151,27 @@ class GridWorld2D:
         # Increment step count after resolving movement
         self.steps_since_reset += 1
 
-        # Determine reward with grid-size-aware scaling
+        # Grid-size-aware reward function
+        # Calculate grid-dependent reward parameters
+        grid_area = self.grid_size_x * self.grid_size_y
+        max_distance = (self.grid_size_x - 1) + (self.grid_size_y - 1)  # Manhattan distance
+        
+        # Scale rewards based on grid size
+        if grid_area <= 100:  # Small grids (10x10)
+            goal_reward = 10.0
+            step_penalty = 0.1
+            wall_penalty = 0.5
+        elif grid_area <= 2500:  # Medium grids (up to 50x50)
+            goal_reward = 50.0
+            step_penalty = 0.05
+            wall_penalty = 1.0
+        else:  # Large grids (100x100+)
+            goal_reward = 100.0
+            step_penalty = 0.02
+            wall_penalty = 0.1
+        
         if next_pos == self.end_pos:
-            # Scale goal reward with grid area to ensure it outweighs step penalties
-            # Goal reward should be at least 2x the maximum possible step penalty
-            max_possible_steps = self.max_steps_per_episode
-            max_step_penalty = max_possible_steps * 0.01  # Base step penalty
-            reward = max(10.0, 2.0 * max_step_penalty)  # Ensure goal reward is substantial
+            reward = goal_reward
         else:
             # Check if agent hit a wall/obstacle (stayed in same position)
             if next_pos == self.current_pos and action in ["up", "down", "left", "right"]:
@@ -172,33 +186,26 @@ class GridWorld2D:
                 elif action == "right":
                     attempted_pos = (x + 1, y)
                 
-                # If attempted position is invalid, apply bump penalty
+                # If attempted position is invalid, apply wall hit penalty
                 if not self._is_valid_position(attempted_pos):
-                    # Small bump penalty for hitting walls
-                    base_penalty = 0.01
-                    grid_area = self.grid_size_x * self.grid_size_y
-                    scaled_penalty = base_penalty * (100.0 / grid_area) ** 0.5
-                    reward = -scaled_penalty * 2  # Double penalty for hitting walls
+                    reward = -wall_penalty
                 else:
-                    # Normal step penalty
-                    base_penalty = 0.01
-                    grid_area = self.grid_size_x * self.grid_size_y
-                    scaled_penalty = base_penalty * (100.0 / grid_area) ** 0.5
-                    reward = -scaled_penalty
+                    reward = -step_penalty
             else:
-                # Normal step penalty
-                base_penalty = 0.01
-                grid_area = self.grid_size_x * self.grid_size_y
-                scaled_penalty = base_penalty * (100.0 / grid_area) ** 0.5
-                reward = -scaled_penalty
+                reward = -step_penalty
 
         # Check if episode is done by reaching goal or exceeding max steps
         if next_pos == self.end_pos:
             done = True
         elif self.steps_since_reset >= self.max_steps_per_episode:
             done = True
-            # Apply timeout penalty proportional to grid size
-            timeout_penalty = max(0.1, 0.01 * (self.grid_size_x + self.grid_size_y))
+            # Apply timeout penalty based on grid size
+            if grid_area <= 100:  # Small grids
+                timeout_penalty = 1.0
+            elif grid_area <= 2500:  # Medium grids
+                timeout_penalty = 5.0
+            else:  # Large grids
+                timeout_penalty = 10.0
             reward = -timeout_penalty
         else:
             done = False

@@ -46,7 +46,7 @@ LEARNING_ACHIEVED_THRESHOLD = (
 
 # Neural Network specific parameters
 learning_rate = 0.001  # learning rate for neural network (typically lower than tabular)
-buffer_size = 10000  # experience replay buffer size
+# buffer_size will be computed based on grid size - see compute_adaptive_buffer_size()
 batch_size = 64  # batch size for neural network training
 target_update_freq = 100  # frequency to update target network
 
@@ -59,25 +59,28 @@ exploration_strategy = "epsilon_greedy"
 
 # Grid Configuration Variables
 num_episodes = 10000  # number of training episodes (more episodes for NN)
-grid_size_x = 100  # width of the 2D grid
-grid_size_y = 100  # height of the 2D grid
+grid_size_x = 20  # width of the 2D grid
+grid_size_y = 20  # height of the 2D grid
 start_pos = (0, 0)  # starting position at bottom left
 goal_pos = (grid_size_x - 1, grid_size_y - 1)  # goal position at top right
 
 # Obstacle Configuration
-USE_OBSTACLES = True  # Set to True to enable obstacles
+USE_OBSTACLES = False  # Set to True to enable obstacles
 OBSTACLE_DENSITY = 0.15  # Fraction of cells to fill with obstacles (0.0 to 1.0)
 
 
-def compute_optimal_nn_size(grid_x, grid_y, min_hidden=128, max_hidden=1024):
+def compute_optimal_nn_size(grid_x, grid_y, min_hidden=128, max_hidden=2048):
     """
     Compute optimal neural network hidden layer size based on grid dimensions.
     
     Algorithm:
     1. Calculate total state space (grid_x * grid_y)
-    2. Target 10-20 parameters per state for good learning capacity
+    2. Use adaptive parameters per state based on grid size:
+       - Small grids (≤100 states): 10-15 params/state
+       - Medium grids (100-2500 states): 15-20 params/state  
+       - Large grids (≥2500 states): 20-25 params/state
     3. Scale hidden size to achieve this ratio
-    4. Apply reasonable bounds to avoid extremely large/small networks
+    4. Apply reasonable bounds and round to power of 2
     
     Args:
         grid_x (int): Grid width
@@ -90,14 +93,20 @@ def compute_optimal_nn_size(grid_x, grid_y, min_hidden=128, max_hidden=1024):
     """
     total_states = grid_x * grid_y
     
-    # Target 15 parameters per state (balanced approach)
-    # For a 3-layer network: 2*h + h*h + h*h + h*4 ≈ 2*h^2 parameters
-    # Solving: 2*h^2 ≈ 15 * total_states
-    # h ≈ sqrt(7.5 * total_states)
-    target_params_per_state = 15
-    optimal_hidden = int(np.sqrt(7.5 * total_states))
+    # Adaptive parameters per state based on grid size
+    if total_states <= 100:  # Small grids (10x10)
+        target_params_per_state = 12
+    elif total_states <= 2500:  # Medium grids (up to 50x50)
+        target_params_per_state = 18
+    else:  # Large grids (100x100+)
+        target_params_per_state = 25
     
-    # Apply bounds
+    # For a 3-layer network: 2*h + h*h + h*h + h*4 ≈ 2*h^2 parameters
+    # Solving: 2*h^2 ≈ target_params_per_state * total_states
+    # h ≈ sqrt(target_params_per_state * total_states / 2)
+    optimal_hidden = int(np.sqrt(target_params_per_state * total_states / 2))
+    
+    # Apply bounds (increased max for large grids)
     optimal_hidden = max(min_hidden, min(optimal_hidden, max_hidden))
     
     # Round to nearest power of 2 for computational efficiency
@@ -109,10 +118,23 @@ def compute_adaptive_buffer_size(grid_x, grid_y, base_size=10000):
     """
     Compute optimal replay buffer size based on grid dimensions.
     Larger grids need more diverse experiences for good learning.
+    
+    Strategy:
+    - For small grids (10x10 = 100 states): use base_size
+    - For medium grids (50x50 = 2500 states): use 2x base_size  
+    - For large grids (100x100 = 10000 states): use 4x base_size
+    - Cap at reasonable maximum to avoid memory issues
     """
     total_states = grid_x * grid_y
-    # Scale buffer size with grid area, but cap it reasonably
-    adaptive_size = min(base_size * (total_states / 2500) ** 0.5, 100000)
+    
+    # Scale buffer size with grid area using square root scaling
+    # This provides good coverage without excessive memory usage
+    scale_factor = (total_states / 100) ** 0.5  # 100 is reference for 10x10 grid
+    adaptive_size = base_size * scale_factor
+    
+    # Apply reasonable bounds: minimum 5k, maximum 200k
+    adaptive_size = max(5000, min(adaptive_size, 200000))
+    
     return int(adaptive_size)
 
 def compute_adaptive_batch_size(grid_x, grid_y, base_size=64):
