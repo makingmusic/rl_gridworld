@@ -72,27 +72,26 @@ OBSTACLE_DENSITY = 0.15  # Fraction of cells to fill with obstacles (0.0 to 1.0)
 def compute_optimal_nn_size(grid_x, grid_y, min_hidden=128, max_hidden=2048):
     """
     Compute optimal neural network hidden layer size based on grid dimensions.
-    
     Algorithm:
     1. Calculate total state space (grid_x * grid_y)
     2. Use adaptive parameters per state based on grid size:
        - Small grids (≤100 states): 10-15 params/state
-       - Medium grids (100-2500 states): 15-20 params/state  
+       - Medium grids (100-2500 states): 15-20 params/state
        - Large grids (≥2500 states): 20-25 params/state
     3. Scale hidden size to achieve this ratio
     4. Apply reasonable bounds and round to power of 2
-    
+
     Args:
         grid_x (int): Grid width
-        grid_y (int): Grid height  
+        grid_y (int): Grid height
         min_hidden (int): Minimum hidden layer size
         max_hidden (int): Maximum hidden layer size
-        
+
     Returns:
         int: Optimal hidden layer size
     """
     total_states = grid_x * grid_y
-    
+
     # Adaptive parameters per state based on grid size
     if total_states <= 100:  # Small grids (10x10)
         target_params_per_state = 12
@@ -100,42 +99,44 @@ def compute_optimal_nn_size(grid_x, grid_y, min_hidden=128, max_hidden=2048):
         target_params_per_state = 18
     else:  # Large grids (100x100+)
         target_params_per_state = 25
-    
+
     # For a 3-layer network: 2*h + h*h + h*h + h*4 ≈ 2*h^2 parameters
     # Solving: 2*h^2 ≈ target_params_per_state * total_states
     # h ≈ sqrt(target_params_per_state * total_states / 2)
     optimal_hidden = int(np.sqrt(target_params_per_state * total_states / 2))
-    
+
     # Apply bounds (increased max for large grids)
     optimal_hidden = max(min_hidden, min(optimal_hidden, max_hidden))
-    
+
     # Round to nearest power of 2 for computational efficiency
     optimal_hidden = 2 ** int(np.log2(optimal_hidden) + 0.5)
-    
+
     return optimal_hidden
+
 
 def compute_adaptive_buffer_size(grid_x, grid_y, base_size=10000):
     """
     Compute optimal replay buffer size based on grid dimensions.
     Larger grids need more diverse experiences for good learning.
-    
+
     Strategy:
     - For small grids (10x10 = 100 states): use base_size
-    - For medium grids (50x50 = 2500 states): use 2x base_size  
+    - For medium grids (50x50 = 2500 states): use 2x base_size
     - For large grids (100x100 = 10000 states): use 4x base_size
     - Cap at reasonable maximum to avoid memory issues
     """
     total_states = grid_x * grid_y
-    
+
     # Scale buffer size with grid area using square root scaling
     # This provides good coverage without excessive memory usage
     scale_factor = (total_states / 100) ** 0.5  # 100 is reference for 10x10 grid
     adaptive_size = base_size * scale_factor
-    
+
     # Apply reasonable bounds: minimum 5k, maximum 200k
     adaptive_size = max(5000, min(adaptive_size, 200000))
-    
+
     return int(adaptive_size)
+
 
 def compute_adaptive_batch_size(grid_x, grid_y, base_size=64):
     """
@@ -159,7 +160,9 @@ print(f"Computed NN hidden size: {hidden_size}")
 print(f"Computed buffer size: {buffer_size}")
 print(f"Computed batch size: {batch_size}")
 print(f"Estimated NN parameters: ~{2 * hidden_size**2 + hidden_size * 4}")
-print(f"Parameters per state: ~{(2 * hidden_size**2 + hidden_size * 4) / (grid_size_x * grid_size_y):.1f}")
+print(
+    f"Parameters per state: ~{(2 * hidden_size**2 + hidden_size * 4) / (grid_size_x * grid_size_y):.1f}"
+)
 
 
 def compute_max_steps(grid_x, grid_y, epsilon, recent_steps=None):
@@ -204,13 +207,14 @@ print(f"Using device: {device}")
 obstacles = set()
 optimal_path_length = None
 if USE_OBSTACLES:
-    print(f"Generating solvable maze with {OBSTACLE_DENSITY*100:.1f}% obstacle density...")
+    print(
+        f"Generating solvable maze with {OBSTACLE_DENSITY * 100:.1f}% obstacle density..."
+    )
     obstacles = generate_solvable_maze(
-        grid_size_x, grid_size_y, start_pos, goal_pos, 
-        obstacle_density=OBSTACLE_DENSITY
+        grid_size_x, grid_size_y, start_pos, goal_pos, obstacle_density=OBSTACLE_DENSITY
     )
     print(f"Generated {len(obstacles)} obstacles")
-    
+
     # Compute optimal path length using A*
     optimal_path_length, optimal_path = a_star_pathfinding(
         grid_size_x, grid_size_y, start_pos, goal_pos, obstacles
@@ -408,7 +412,8 @@ if USE_WANDB:
         # Additional computed parameters for analysis
         "total_states": grid_size_x * grid_size_y,
         "estimated_nn_parameters": 2 * hidden_size**2 + hidden_size * 4,
-        "parameters_per_state": (2 * hidden_size**2 + hidden_size * 4) / (grid_size_x * grid_size_y),
+        "parameters_per_state": (2 * hidden_size**2 + hidden_size * 4)
+        / (grid_size_x * grid_size_y),
         "adaptive_sizing": True,
         # Obstacle parameters
         "use_obstacles": USE_OBSTACLES,
@@ -451,12 +456,12 @@ with Live(
         while not done:
             action = agent.choose_action(state)
             next_state, reward, done = env.step(action)
-            
+
             # Track wall hits (when agent stays in same position and gets negative reward)
             if next_state == state and reward < 0:
                 episode_wall_hits += 1
                 total_wall_hits += 1
-            
+
             agent.update_q_value(state, action, reward, next_state, done)
             state = next_state
             step_count += 1
@@ -555,14 +560,14 @@ with Live(
         episode_data.append(episode)
         step_data.append(step_count)
         epsilon_data.append(agent.epsilon)
-        
+
         # Track success and metrics
         episode_success = done and env.is_terminal()
         if episode_success:
             success_count += 1
-        
+
         total_returns += episode_reward
-        
+
         # Calculate suboptimality ratio
         if episode_success and optimal_path_length is not None:
             suboptimality_ratio = step_count / optimal_path_length
@@ -576,7 +581,12 @@ with Live(
         else:
             # Check if the path taken was optimal
             best_path_length = plots.get_best_path_length(
-                grid_size_x, grid_size_y, start_pos, goal_pos, agent.getQTable(), obstacles
+                grid_size_x,
+                grid_size_y,
+                start_pos,
+                goal_pos,
+                agent.getQTable(),
+                obstacles,
             )
 
             if best_path_length is not None and best_path_length <= optimal_path_length:
@@ -626,7 +636,12 @@ with Live(
         ):
             episode_duration = time.time() - episode_start_time
             best_path_length = plots.get_best_path_length(
-                grid_size_x, grid_size_y, start_pos, goal_pos, agent.getQTable(), obstacles
+                grid_size_x,
+                grid_size_y,
+                start_pos,
+                goal_pos,
+                agent.getQTable(),
+                obstacles,
             )
             if SHOW_PLOTS:
                 q_table_img, qtable_fig, qtable_ax = plots.saveQTableAsImage(
@@ -637,14 +652,18 @@ with Live(
                     fig=qtable_fig,
                     ax=qtable_ax,
                 )
-            
+
             # Calculate metrics
             success_rate = success_count / (episode + 1)
             mean_steps = np.mean(step_data) if step_data else 0
             wall_hit_rate = total_wall_hits / (episode + 1) if episode > 0 else 0
             mean_return = total_returns / (episode + 1) if episode > 0 else 0
-            current_suboptimality = suboptimality_ratios[-1] if suboptimality_ratios and suboptimality_ratios[-1] is not None else None
-            
+            current_suboptimality = (
+                suboptimality_ratios[-1]
+                if suboptimality_ratios and suboptimality_ratios[-1] is not None
+                else None
+            )
+
             wandbconfig = {
                 "episode": episode,
                 "steps": step_count,
@@ -687,7 +706,7 @@ with Live(
         last_ten_steps_numeric.append(step_count)
         last_ten_steps.pop(0)
         last_ten_steps.append(f"{step_count}{'(M)' if timed_out else ''}")
-        
+
         # Update reward histories
         last_ten_rewards_numeric.pop(0)
         last_ten_rewards_numeric.append(episode_reward)
@@ -696,9 +715,9 @@ with Live(
 
         # Get the Q-table for this episode (approximate from neural network)
         qtable = agent.getQTable()
-#        episode_qtable = {}
-#        for state, actions in qtable.items():
-#            episode_qtable[state] = {"up": actions["up"], "down": actions["down"], "left": actions["left"], "right": actions["right"],}
+        #        episode_qtable = {}
+        #        for state, actions in qtable.items():
+        #            episode_qtable[state] = {"up": actions["up"], "down": actions["down"], "left": actions["left"], "right": actions["right"],}
 
         # Decay exploration rate at end of episode
         agent.decay_epsilon()
@@ -737,7 +756,12 @@ with Live(
                 _saved_eps = agent.epsilon
                 agent.epsilon = 0.0
                 path_display = plots.display_actual_path(
-                    grid_size_x, grid_size_y, start_pos, goal_pos, agent.getQTable(), obstacles
+                    grid_size_x,
+                    grid_size_y,
+                    start_pos,
+                    goal_pos,
+                    agent.getQTable(),
+                    obstacles,
                 )
                 agent.epsilon = _saved_eps
                 grid_display = plots.update_grid_display(
@@ -882,12 +906,16 @@ if USE_OBSTACLES:
     print(f"Wall hit rate: {total_wall_hits / len(episode_data):.2f} hits per episode")
     print(f"Mean return per episode: {total_returns / len(episode_data):.2f}")
     print(f"Optimal path length: {optimal_path_length} steps")
-    
+
     # Calculate mean suboptimality ratio for successful episodes
-    successful_suboptimality = [ratio for ratio in suboptimality_ratios if ratio is not None]
+    successful_suboptimality = [
+        ratio for ratio in suboptimality_ratios if ratio is not None
+    ]
     if successful_suboptimality:
         mean_suboptimality = np.mean(successful_suboptimality)
-        print(f"Mean suboptimality ratio: {mean_suboptimality:.2f} (agent_steps / optimal_steps)")
+        print(
+            f"Mean suboptimality ratio: {mean_suboptimality:.2f} (agent_steps / optimal_steps)"
+        )
         print(f"Best suboptimality ratio: {min(successful_suboptimality):.2f}")
     else:
         print("No successful episodes to calculate suboptimality ratio")
