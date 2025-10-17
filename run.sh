@@ -9,7 +9,7 @@ if [ -n "$VIRTUAL_ENV" ]; then
 fi
 
 # Set custom virtual environment directory
-export UV_PROJECT_ENVIRONMENT=myenv1
+export UV_PROJECT_ENVIRONMENT=myenv
 
 # Colors for better readability
 GREEN='\033[0;32m'
