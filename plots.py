@@ -13,17 +13,23 @@ from PIL import Image
 #from rich.progress import BarColumn, Progress, SpinnerColumn, TextColumn, MofNCompleteColumn, TimeElapsedColumn, TimeRemainingColumn, TaskProgressColumn
 
 
-def create_grid_display(grid_size_x, grid_size_y, start_pos, goal_pos, qtable):
+def create_grid_display(grid_size_x, grid_size_y, start_pos, goal_pos, qtable, obstacles=None):
     """Create a text-based grid display showing Q-values and decisions."""
     console = Console()
     grid_display = []
+    obstacles = obstacles if obstacles is not None else set()
     
     # Create the grid
     for row in range(grid_size_y):
         grid_row = []
         for col in range(grid_size_x):
             state = (col, row)
-            if state in qtable:
+            
+            # Check if this is an obstacle
+            if state in obstacles:
+                text = Text("#", style="bold white on red")
+                grid_row.append(text)
+            elif state in qtable:
                 actions = qtable[state]
                 # Find best action
                 action_values = {
@@ -60,12 +66,12 @@ def create_grid_display(grid_size_x, grid_size_y, start_pos, goal_pos, qtable):
     
     return grid_display
 
-def update_grid_display(grid_display, qtable, start_pos, goal_pos):
+def update_grid_display(grid_display, qtable, start_pos, goal_pos, obstacles=None):
     """Update the existing grid display with new Q-values."""
     console = Console()
     
     # Create new grid display
-    return create_grid_display(len(grid_display[0]), len(grid_display), start_pos, goal_pos, qtable)
+    return create_grid_display(len(grid_display[0]), len(grid_display), start_pos, goal_pos, qtable, obstacles)
 
 def plotStepsPerEpisode(pltPointer, episode_data, step_data, num_episodes=20, fig=None, ax=None):
     """Plot steps per episode with optional figure reuse."""
@@ -205,11 +211,12 @@ def grid_to_table(grid_display):
         table.add_row(*row)
     return table
 
-def display_actual_path(grid_size_x, grid_size_y, start_pos, goal_pos, qtable):
+def display_actual_path(grid_size_x, grid_size_y, start_pos, goal_pos, qtable, obstacles=None):
     """Display the actual path that the model would take from start to goal, with clearer visuals.
     The path is limited to 2 * (grid_size_x + grid_size_y) steps to prevent infinite loops."""
     console = Console()
     grid_display = []
+    obstacles = obstacles if obstacles is not None else set()
     for _ in range(grid_size_y):
         grid_display.append(['·'] * grid_size_x)  # Use middle dot for non-path
 
@@ -264,7 +271,9 @@ def display_actual_path(grid_size_x, grid_size_y, start_pos, goal_pos, qtable):
         display_row = []
         for col in range(grid_size_x):
             pos = (col, row)
-            if pos == start_pos:
+            if pos in obstacles:
+                display_row.append(Text('#', style='bold white on red'))
+            elif pos == start_pos:
                 display_row.append(Text('S', style='bold green'))
             elif pos == goal_pos:
                 display_row.append(Text('G', style='bold red'))
@@ -396,12 +405,13 @@ def plotQTableValues(pltPointer, qtable_data, states_of_interest, fig=None, ax=N
     
     return fig, ax
 
-def get_best_path_length(grid_size_x, grid_size_y, start_pos, goal_pos, qtable):
+def get_best_path_length(grid_size_x, grid_size_y, start_pos, goal_pos, qtable, obstacles=None):
     """Return the length of the best path from start_pos to goal_pos using the Q-table."""
     current_pos = start_pos
     path = [current_pos]
     max_steps = 5 * (grid_size_x + grid_size_y)
     steps_taken = 0
+    obstacles = obstacles if obstacles is not None else set()
 
     while current_pos != goal_pos and steps_taken < max_steps:
         if current_pos not in qtable or not qtable[current_pos]:
@@ -425,6 +435,11 @@ def get_best_path_length(grid_size_x, grid_size_y, start_pos, goal_pos, qtable):
             current_pos = (x - 1, y)
         elif best_action == 'right':
             current_pos = (x + 1, y)
+        
+        # Check if the new position is valid (not an obstacle)
+        if current_pos in obstacles:
+            break  # Hit an obstacle, path is invalid
+            
         path.append(current_pos)
         steps_taken += 1
     # If goal not reached, return None or a large value
