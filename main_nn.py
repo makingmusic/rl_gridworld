@@ -59,14 +59,14 @@ exploration_strategy = "epsilon_greedy"
 
 # Grid Configuration Variables
 num_episodes = 10000  # number of training episodes (more episodes for NN)
-grid_size_x = 10  # width of the 2D grid
-grid_size_y = 10  # height of the 2D grid
+grid_size_x = 7  # width of the 2D grid
+grid_size_y = 7  # height of the 2D grid
 start_pos = (0, 0)  # starting position at bottom left
 goal_pos = (grid_size_x - 1, grid_size_y - 1)  # goal position at top right
 
 # Obstacle Configuration
-USE_OBSTACLES = False  # Set to True to enable obstacles
-OBSTACLE_DENSITY = 0.15  # Fraction of cells to fill with obstacles (0.0 to 1.0)
+USE_OBSTACLES = True  # Set to True to enable obstacles
+OBSTACLE_DENSITY = 0.35  # Fraction of cells to fill with obstacles (0.0 to 1.0)
 
 
 def compute_optimal_nn_size(grid_x, grid_y, min_hidden=128, max_hidden=2048):

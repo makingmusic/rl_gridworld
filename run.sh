@@ -1,12 +1,30 @@
 #!/bin/bash
 
+# Deactivate any existing virtual environment
+if [ -n "$VIRTUAL_ENV" ]; then
+    echo "Deactivating existing virtual environment: $VIRTUAL_ENV"
+    unset VIRTUAL_ENV
+    unset PYTHONPATH
+    export PATH=$(echo $PATH | sed 's|[^:]*myenv[^:]*:||g')
+fi
+
+# Set custom virtual environment directory
+export UV_PROJECT_ENVIRONMENT=myenv1
+
 # Colors for better readability
 GREEN='\033[0;32m'
 BLUE='\033[0;34m'
 YELLOW='\033[1;33m'
 NC='\033[0m' # No Color
 
-echo -e "${BLUE}Setting up RL Grid World Environment...${NC}"
+echo -e "${BLUE}Setting up RL Grid World Environment with uv...${NC}"
+
+# Check if uv is installed
+if ! command -v uv &> /dev/null; then
+    echo -e "${YELLOW}uv is not installed. Installing uv...${NC}"
+    curl -LsSf https://astral.sh/uv/install.sh | sh
+    source $HOME/.cargo/env
+fi
 
 # Check if Python 3 is installed
 if ! command -v python3 &> /dev/null; then
@@ -14,32 +32,32 @@ if ! command -v python3 &> /dev/null; then
     exit 1
 fi
 
-# Create and activate virtual environment
-echo -e "${BLUE}Creating Python virtual environment...${NC}"
-python3 -m venv .venv
-source .venv/bin/activate
+# Initialize uv project if not already done
+if [ ! -f "pyproject.toml" ]; then
+    echo -e "${BLUE}Initializing uv project...${NC}"
+    uv init --no-readme
+fi
 
-# Install requirements
-echo -e "${BLUE}Installing required packages...${NC}"
-pip install --upgrade pip
-pip install -r requirements.txt
+# Sync dependencies using uv
+echo -e "${BLUE}Installing required packages with uv...${NC}"
+uv sync
 
 # Check if wandb is installed
-if ! python3 -m pip show wandb &> /dev/null; then
+if ! uv run --active python -c "import wandb" &> /dev/null; then
     echo -e "${YELLOW}wandb is not installed. Installing wandb...${NC}"
-    pip install wandb
+    uv add wandb
 fi
 
 # Check if wandb is logged in
-if ! python3 -m wandb status | grep -q 'You are logged in as'; then
-    echo -e "${YELLOW}wandb is not logged in. Please run 'wandb login' to enable experiment tracking.${NC}"
+if ! uv run --active wandb status | grep -q 'You are logged in as'; then
+    echo -e "${YELLOW}wandb is not logged in. Please run 'uv run wandb login' to enable experiment tracking.${NC}"
     echo -e "${YELLOW}You can get your API key from https://wandb.ai/authorize${NC}"
     echo -e "${YELLOW}Note: You can still run the code without wandb, but experiment tracking will be disabled.${NC}"
 fi
 
 echo -e "${GREEN}Setup complete!${NC}"
-echo -e "\nTo run the 1D Grid World example, use:"
-echo -e "${BLUE}python 1dworld.py${NC}"
-echo -e "\nTo run the 2D Grid World example, use:"
-echo -e "${BLUE}python 2dworld.py${NC}"
-echo -e "\nNote: The virtual environment is now activated. To deactivate it later, simply type 'deactivate'" 
+echo -e "\nTo run the Tabular Q-Learning example, use:"
+echo -e "${BLUE}uv run python main.py${NC}"
+echo -e "\nTo run the Deep Q-Network (DQN) example, use:"
+echo -e "${BLUE}uv run python main_nn.py${NC}"
+echo -e "\nNote: uv automatically manages the virtual environment. No need to activate/deactivate manually!" 
