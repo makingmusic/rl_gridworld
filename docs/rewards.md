@@ -19,7 +19,7 @@ The sparse reward structure became problematic starting around **30x30 grids** a
 
 ### The Solution: Grid-Size-Aware Reward Scaling
 
-**New Reward Function (Scaled with Grid Size):**
+**Previous Reward Function (Mathematical Scaling):**
 
 1. **Scaled Goal Reward**:
    ```python
@@ -45,21 +45,48 @@ The sparse reward structure became problematic starting around **30x30 grids** a
    - Scales with grid perimeter
    - Maintains appropriate penalty relative to grid size
 
-### Results: Balanced Rewards Across All Grid Sizes
+### Current Implementation: Tiered Reward System
 
-| Grid Size | Step Penalty | Goal Reward | Optimal Total | Ratio |
-|-----------|--------------|-------------|---------------|-------|
-| 5x5       | 0.0200       | 10.0        | 9.8           | 98.4  |
-| 10x10     | 0.0100       | 10.0        | 9.8           | 49.1  |
-| 20x20     | 0.0050       | 10.0        | 9.8           | 24.5  |
-| 50x50     | 0.0020       | 10.0        | 9.8           | 9.8   |
-| 100x100   | 0.0010       | 10.0        | 9.8           | 4.9   |
+**Latest Reward Function (Tiered Approach):**
 
-**Key Benefits:**
-- ✅ Goal reward properly outweighs step penalties for all grid sizes
-- ✅ Step penalties scale appropriately (smaller for larger grids)
-- ✅ Maintains strong incentive to reach the goal quickly
-- ✅ Prevents over-penalization in large grids
-- ✅ Consistent reward ratios across different grid sizes
+The current implementation uses a **tiered reward system** based on grid area thresholds:
 
-For implementation details, see the step() function.
+```python
+grid_area = grid_size_x * grid_size_y
+
+if grid_area <= 100:  # Small grids (10x10 and smaller)
+    goal_reward = 10.0
+    step_penalty = 0.1
+    wall_penalty = 0.5
+    timeout_penalty = 1.0
+elif grid_area <= 2500:  # Medium grids (up to 50x50)
+    goal_reward = 50.0
+    step_penalty = 0.05
+    wall_penalty = 1.0
+    timeout_penalty = 5.0
+else:  # Large grids (100x100+)
+    goal_reward = 100.0
+    step_penalty = 0.02
+    wall_penalty = 0.1
+    timeout_penalty = 10.0
+```
+
+**Key Features:**
+- **Tiered scaling**: Three distinct reward tiers based on grid area
+- **Wall hit penalties**: Explicit penalties for hitting walls/obstacles
+- **Timeout penalties**: Separate penalties for episode timeouts
+- **Simplified logic**: Easier to understand and debug than mathematical scaling
+
+### Results: Current Tiered Reward System
+
+| Grid Size | Tier | Step Penalty | Wall Penalty | Goal Reward | Timeout Penalty | Optimal Total* |
+|-----------|------|--------------|--------------|-------------|-----------------|----------------|
+| 5x5       | Small| 0.1          | 0.5          | 10.0        | 1.0            | 9.0             |
+| 10x10     | Small| 0.1          | 0.5          | 10.0        | 1.0            | 8.0             |
+| 20x20     | Mediu| 0.05        | 1.0          | 50.0        | 5.0            | 48.0            |
+| 50x50     | Mediu| 0.05        | 1.0          | 50.0        | 5.0            | 45.0            |
+| 100x100   | Large| 0.02         | 0.1          | 100.0       | 10.0           | 98.0            |
+
+*Optimal Total = Goal Reward - (Optimal Steps × Step Penalty)
+
+For implementation details, see the `step()` function in `gridworld2d.py`.
