@@ -29,7 +29,7 @@ After setup, you can run:
 
 ## Configurations
 - Look for all configurations in main.py and main_nn.py. There are tons of variables to play around with and their names and documentation is mostly self-explanatory.
-- Some documentation for the configurations you can play around with are in configs.md
+- Some documentation for the configurations you can play around with are in [docs/configs.md](docs/configs.md)
 
 ## The Environment
 
@@ -61,11 +61,11 @@ This project offers two different Q-learning implementations:
 - **Target network** for stable Q-value estimation
 - **Best for**: Large grids (≥ 50x50), advanced RL techniques
 
-For detailed comparison and usage guide, see [NEURAL_NETWORK_GUIDE.md](NEURAL_NETWORK_GUIDE.md).
+For detailed comparison and usage guide, see [docs/nn.md](docs/nn.md).
 
 ## Reward Structure & Grid Size Scaling
 
-Reward shaping is complete different animal. Moving all this discussion to a new file: rewards.md 
+Reward shaping is complete different animal. Moving all this discussion to a new file: [docs/rewards.md](docs/rewards.md) 
 
 
 ## Adaptive Neural Network Sizing
@@ -137,7 +137,7 @@ def compute_adaptive_batch_size(grid_x, grid_y, base_size=64):
 
 
 # Future Improvements
-I have put them all under future-todo.md
+I have put them all under [docs/future-todo.md](docs/future-todo.md)
 I do find myself spreading thin across so many rabbit holes in this problem. Often I will see a youtube video that will kick off a sidequest in my head and it is (mostly) logged in that file for me to come back to at some point. I am hardly good at doing this with good discipline.
 
 
