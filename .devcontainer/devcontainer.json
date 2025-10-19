@@ -1,0 +1,14 @@
+{
+  "name": "Python Sandbox",
+  "image": "ghcr.io/astral-sh/uv:python3.14-bookworm",
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "ms-python.python",
+        "ms-python.vscode-pylance"
+      ]
+    }
+  },
+  "postCreateCommand": "uv sync || echo 'No pyproject.toml found, skipping uv sync'",
+  "remoteUser": "root"
+}
