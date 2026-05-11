@@ -116,6 +116,7 @@ Edit `PID_KP`, `PID_KI`, `PID_KD` at the top of `main_pendulum.py` and re-run. T
 | `recovery.py` | `RecoveryTracker` — measures peak-to-balanced tick count after each disturbance |
 | `tui.py` | Rich `Live` view, ASCII renderer, bar widgets, non-blocking keyboard reader |
 | `main_pendulum.py` | Config + main loop. All hyperparameters live at the top of this file |
+| `hardware.md` | Notes on building a physical PID demo (ball-on-beam) with parts available in Singapore |
 | `cartpole.py` | (Phase 2 — not yet) cartpole env |
 | `main_cartpole.py` | (Phase 2 — not yet) cartpole entry script |
 
