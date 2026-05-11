@@ -27,6 +27,24 @@ After setup, you can run:
 - `uv python main.py` for tabular Q-learning in the 2D grid world
 - `uv python main_nn.py` for Deep Q-Network (DQN) in the 2D grid world
 
+## Other experiments
+
+- [balance/](balance/) — classical control (PID) on balancing problems (inverted pendulum, cartpole). A separate sandbox that shares the env interface so an RL agent can plug in later. See [plans/balance.md](plans/balance.md) for the plan.
+
+## Documentation
+
+- [AGENTS.md](AGENTS.md) — instructions for AI coding agents (Claude Code, Cursor, Codex, etc.) working in this repo.
+- [docs/](docs/) — topic guides:
+  - [development.md](docs/development.md) — install, run, devcontainer, debugging
+  - [architecture.md](docs/architecture.md) — module map and data flow
+  - [configs.md](docs/configs.md) — every tunable knob
+  - [tabular.md](docs/tabular.md) — tabular Q-learning details
+  - [nn.md](docs/nn.md) — Deep Q-Network details
+  - [environment.md](docs/environment.md) — `GridWorld2D`, obstacles, A*, mazes
+  - [rewards.md](docs/rewards.md) — reward shaping and tier table
+  - [wandb.md](docs/wandb.md) — optional W&B integration
+  - [future-todo.md](docs/future-todo.md) — roadmap and side quests
+
 ## Configurations
 - Look for all configurations in main.py and main_nn.py. There are tons of variables to play around with and their names and documentation is mostly self-explanatory.
 - Some documentation for the configurations you can play around with are in [docs/configs.md](docs/configs.md)
