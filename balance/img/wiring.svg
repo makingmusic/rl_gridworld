@@ -1,0 +1,143 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 860 520" font-family="-apple-system, system-ui, sans-serif" font-size="12">
+  <style>
+    .lbl { fill: #222; }
+    .pin { fill: #fff; stroke: #000; }
+    .wire-power { stroke: #d33; stroke-width: 2.5; fill: none; }
+    .wire-gnd   { stroke: #222; stroke-width: 2.5; fill: none; }
+    .wire-data  { stroke: #2a5; stroke-width: 2.5; fill: none; }
+    .wire-pwm   { stroke: #d80; stroke-width: 2.5; fill: none; }
+  </style>
+
+  <!-- Title -->
+  <text x="430" y="26" text-anchor="middle" font-size="15" font-weight="600" class="lbl">Wiring: Raspberry Pi ↔ VL53L0X ↔ SG90</text>
+
+  <!-- ============== RASPBERRY PI HEADER (left side) ============== -->
+  <rect x="60" y="60" width="180" height="420" fill="#0e7c3a" stroke="#000"/>
+  <text x="150" y="82" text-anchor="middle" fill="#fff" font-weight="600">Raspberry Pi (40-pin)</text>
+
+  <!-- Header pins, two columns -->
+  <!-- We'll only label the pins we use -->
+  <!-- Pin layout: physical 1-40, odd left col, even right col -->
+  <!-- Pin 1 (3.3V), Pin 2 (5V), Pin 3 (GPIO2 SDA), Pin 4 (5V), Pin 5 (GPIO3 SCL), Pin 6 (GND), -->
+  <!-- Pin 9 (GND), Pin 12 (GPIO18 PWM) -->
+
+  <!-- Generic gray pins everywhere -->
+  <g fill="#999">
+    <rect x="100" y="100" width="14" height="10"/><rect x="186" y="100" width="14" height="10"/>
+    <rect x="100" y="115" width="14" height="10"/><rect x="186" y="115" width="14" height="10"/>
+    <rect x="100" y="130" width="14" height="10"/><rect x="186" y="130" width="14" height="10"/>
+    <rect x="100" y="145" width="14" height="10"/><rect x="186" y="145" width="14" height="10"/>
+    <rect x="100" y="160" width="14" height="10"/><rect x="186" y="160" width="14" height="10"/>
+    <rect x="100" y="175" width="14" height="10"/><rect x="186" y="175" width="14" height="10"/>
+    <rect x="100" y="190" width="14" height="10"/><rect x="186" y="190" width="14" height="10"/>
+  </g>
+
+  <!-- Highlight pins we use, with labels -->
+  <!-- Pin 1 (3.3V) - left col, row 1 -->
+  <rect x="100" y="100" width="14" height="10" fill="#fbb"/>
+  <text x="96" y="109" text-anchor="end" class="lbl">Pin 1 · 3.3V</text>
+
+  <!-- Pin 3 (GPIO2 SDA) - left col, row 2 -->
+  <rect x="100" y="115" width="14" height="10" fill="#bfb"/>
+  <text x="96" y="124" text-anchor="end" class="lbl">Pin 3 · SDA (GPIO 2)</text>
+
+  <!-- Pin 5 (GPIO3 SCL) - left col, row 3 -->
+  <rect x="100" y="130" width="14" height="10" fill="#bfb"/>
+  <text x="96" y="139" text-anchor="end" class="lbl">Pin 5 · SCL (GPIO 3)</text>
+
+  <!-- Pin 6 (GND) - right col, row 3 -->
+  <rect x="186" y="130" width="14" height="10" fill="#ccc"/>
+  <text x="204" y="139" class="lbl">Pin 6 · GND</text>
+
+  <!-- Pin 2 (5V) - right col, row 1 -->
+  <rect x="186" y="100" width="14" height="10" fill="#fdc"/>
+  <text x="204" y="109" class="lbl">Pin 2 · 5V</text>
+
+  <!-- Pin 9 (GND) - left col, row 5 -->
+  <rect x="100" y="160" width="14" height="10" fill="#ccc"/>
+  <text x="96" y="169" text-anchor="end" class="lbl">Pin 9 · GND</text>
+
+  <!-- Pin 12 (GPIO18 PWM) - right col, row 6 -->
+  <rect x="186" y="175" width="14" height="10" fill="#fde"/>
+  <text x="204" y="184" class="lbl">Pin 12 · GPIO 18 (PWM)</text>
+
+  <!-- ...rest of header indicated... -->
+  <text x="150" y="225" text-anchor="middle" class="lbl" font-style="italic" fill="#fff">(other pins unused)</text>
+
+  <!-- ============== VL53L0X (top right) ============== -->
+  <rect x="500" y="80" width="220" height="120" fill="#2a4d8f" stroke="#000"/>
+  <text x="610" y="105" text-anchor="middle" fill="#fff" font-weight="600">VL53L0X (laser ToF sensor)</text>
+  <circle cx="540" cy="135" r="6" fill="#000"/>
+  <circle cx="560" cy="135" r="6" fill="#222"/>
+  <text x="610" y="160" text-anchor="middle" fill="#fff" font-size="11">emitter · receiver</text>
+
+  <!-- VL53L0X pins on bottom -->
+  <g>
+    <rect x="520" y="200" width="14" height="10" class="pin"/>
+    <text x="527" y="225" text-anchor="middle" class="lbl">VIN</text>
+
+    <rect x="560" y="200" width="14" height="10" class="pin"/>
+    <text x="567" y="225" text-anchor="middle" class="lbl">GND</text>
+
+    <rect x="600" y="200" width="14" height="10" class="pin"/>
+    <text x="607" y="225" text-anchor="middle" class="lbl">SDA</text>
+
+    <rect x="640" y="200" width="14" height="10" class="pin"/>
+    <text x="647" y="225" text-anchor="middle" class="lbl">SCL</text>
+  </g>
+
+  <!-- ============== SG90 (bottom right) ============== -->
+  <rect x="500" y="340" width="220" height="120" fill="#444" stroke="#000"/>
+  <text x="610" y="365" text-anchor="middle" fill="#fff" font-weight="600">SG90 micro-servo</text>
+  <rect x="600" y="380" width="40" height="40" fill="#888" stroke="#fff"/>
+  <circle cx="620" cy="400" r="6" fill="#fff"/>
+
+  <!-- SG90 wires from left side -->
+  <g>
+    <rect x="490" y="370" width="10" height="8" fill="#d33"/>
+    <text x="486" y="377" text-anchor="end" class="lbl">red (5V)</text>
+
+    <rect x="490" y="395" width="10" height="8" fill="#222"/>
+    <text x="486" y="402" text-anchor="end" class="lbl">brown (GND)</text>
+
+    <rect x="490" y="420" width="10" height="8" fill="#d80"/>
+    <text x="486" y="427" text-anchor="end" class="lbl">orange (signal)</text>
+  </g>
+
+  <!-- ============== WIRES ============== -->
+
+  <!-- Pi 3.3V (pin 1) -> VL53L0X VIN -->
+  <path d="M 114 105 Q 350 100 527 200" class="wire-power"/>
+  <text x="320" y="92" class="lbl" fill="#d33">3.3V → VIN</text>
+
+  <!-- Pi GND (pin 6) -> VL53L0X GND -->
+  <path d="M 186 135 Q 380 180 567 200" class="wire-gnd"/>
+  <text x="340" y="178" class="lbl">GND → GND</text>
+
+  <!-- Pi SDA (pin 3) -> VL53L0X SDA -->
+  <path d="M 114 120 Q 360 130 607 200" class="wire-data"/>
+  <text x="320" y="120" class="lbl" fill="#2a5">SDA → SDA</text>
+
+  <!-- Pi SCL (pin 5) -> VL53L0X SCL -->
+  <path d="M 114 135 Q 380 160 647 200" class="wire-data"/>
+  <text x="320" y="150" class="lbl" fill="#2a5">SCL → SCL</text>
+
+  <!-- Pi 5V (pin 2) -> SG90 red -->
+  <path d="M 200 105 Q 360 350 490 374" class="wire-power"/>
+  <text x="290" y="340" class="lbl" fill="#d33">5V → SG90 red</text>
+
+  <!-- Pi GND (pin 9) -> SG90 brown -->
+  <path d="M 114 165 Q 320 380 490 399" class="wire-gnd"/>
+  <text x="300" y="395" class="lbl">GND → SG90 brown</text>
+
+  <!-- Pi GPIO 18 (pin 12) -> SG90 orange -->
+  <path d="M 200 180 Q 360 420 490 424" class="wire-pwm"/>
+  <text x="300" y="430" class="lbl" fill="#d80">GPIO 18 → SG90 orange (PWM)</text>
+
+  <!-- Legend -->
+  <text x="60" y="500" class="lbl" font-weight="600">Legend:</text>
+  <line x1="125" y1="497" x2="155" y2="497" class="wire-power"/><text x="160" y="500" class="lbl">power</text>
+  <line x1="200" y1="497" x2="230" y2="497" class="wire-gnd"/><text x="235" y="500" class="lbl">ground</text>
+  <line x1="280" y1="497" x2="310" y2="497" class="wire-data"/><text x="315" y="500" class="lbl">I²C data</text>
+  <line x1="365" y1="497" x2="395" y2="497" class="wire-pwm"/><text x="400" y="500" class="lbl">PWM signal</text>
+</svg>

@@ -1,0 +1,114 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 980 460" font-family="-apple-system, system-ui, sans-serif" font-size="12">
+  <style>
+    .lbl { fill: #222; }
+    .note { fill: #555; font-style: italic; font-size: 11px; }
+    .arrow { stroke: #d33; stroke-width: 2; fill: none; marker-end: url(#arr); }
+  </style>
+  <defs>
+    <marker id="arr" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto">
+      <polygon points="0,0 9,3 0,6" fill="#d33"/>
+    </marker>
+  </defs>
+
+  <!-- Title -->
+  <text x="490" y="26" text-anchor="middle" font-size="15" font-weight="600" class="lbl">Linkage in motion — rotation in, tilt out</text>
+
+  <!-- ============ LEFT PANEL: horn rotated CCW, rod up, far end up ============ -->
+  <text x="240" y="58" text-anchor="middle" font-weight="600" class="lbl">Horn rotates CCW → rod pushes up → beam tilts right-end-up</text>
+
+  <!-- Base -->
+  <rect x="40" y="370" width="400" height="14" fill="#bdbdbd" stroke="#000"/>
+
+  <!-- Pivot post -->
+  <rect x="110" y="240" width="28" height="130" fill="#cfcfcf" stroke="#000"/>
+  <circle cx="124" cy="240" r="10" fill="#fff" stroke="#000" stroke-width="2"/>
+  <circle cx="124" cy="240" r="3" fill="#000"/>
+
+  <!-- Beam (tilted: left low, right high) -->
+  <!-- Center at pivot (124,240), tilt about pivot. Right end raised. -->
+  <!-- Beam goes from pivot to ~400 horizontal, tilted ~ -12 degrees -->
+  <g transform="rotate(-12 124 240)">
+    <rect x="124" y="230" width="290" height="16" fill="#d9b382" stroke="#000"/>
+  </g>
+  <!-- Ball rolls toward the lower (left) end - but pivot is at the left end, so ball goes left -->
+  <!-- For visual clarity: ball near left -->
+  <circle cx="155" cy="218" r="10" fill="#fff" stroke="#000" stroke-width="2"/>
+
+  <!-- Servo -->
+  <rect x="335" y="290" width="74" height="74" fill="#333" stroke="#000"/>
+  <text x="372" y="335" text-anchor="middle" fill="#fff" font-weight="600" font-size="12">SERVO</text>
+
+  <!-- Servo horn rotated CCW (attach point higher, also slightly left) -->
+  <circle cx="372" cy="290" r="5" fill="#888" stroke="#000"/>
+  <line x1="372" y1="290" x2="362" y2="252" stroke="#000" stroke-width="4"/>
+  <circle cx="362" cy="252" r="4" fill="#d33"/>
+
+  <!-- Push-rod from horn attach to beam right-end -->
+  <!-- Beam right end (after rotation): pivot+290 along -12deg from (124,240) -->
+  <!-- approx: x = 124 + 290*cos(-12) = 124 + 283.5 = 407.5; y = 240 + 290*sin(-12) = 240 - 60.3 = 179.7 -->
+  <!-- but we want rod to attach roughly at the beam, near right end at the same x as servo: use x=395, y=192 -->
+  <line x1="362" y1="252" x2="385" y2="195" stroke="#222" stroke-width="3"/>
+  <circle cx="385" cy="195" r="4" fill="#d33"/>
+
+  <!-- Direction arrows -->
+  <path d="M 362 285 A 18 18 0 0 1 358 268" class="arrow"/>
+  <text x="320" y="278" class="note" fill="#d33">rotate CCW</text>
+
+  <text x="395" y="245" class="note" fill="#d33">rod up ↑</text>
+
+  <!-- Pivot label -->
+  <text x="60" y="225" class="note">pivot</text>
+  <line x1="80" y1="228" x2="114" y2="238" class="arrow" style="marker-end:none;stroke:#777;stroke-width:1"/>
+
+  <!-- Ball motion -->
+  <text x="155" y="200" text-anchor="middle" class="note" fill="#d33">ball rolls ← downhill</text>
+
+  <!-- ============ RIGHT PANEL: horn rotated CW, rod down, far end down ============ -->
+  <text x="730" y="58" text-anchor="middle" font-weight="600" class="lbl">Horn rotates CW → rod pulls down → beam tilts right-end-down</text>
+
+  <!-- Base -->
+  <rect x="530" y="370" width="400" height="14" fill="#bdbdbd" stroke="#000"/>
+
+  <!-- Pivot post -->
+  <rect x="600" y="240" width="28" height="130" fill="#cfcfcf" stroke="#000"/>
+  <circle cx="614" cy="240" r="10" fill="#fff" stroke="#000" stroke-width="2"/>
+  <circle cx="614" cy="240" r="3" fill="#000"/>
+
+  <!-- Beam tilted: right end down, left end up - tilt +12 deg about pivot -->
+  <g transform="rotate(12 614 240)">
+    <rect x="614" y="230" width="290" height="16" fill="#d9b382" stroke="#000"/>
+  </g>
+
+  <!-- Ball rolls toward right (lower) -->
+  <circle cx="870" cy="285" r="10" fill="#fff" stroke="#000" stroke-width="2"/>
+
+  <!-- Servo -->
+  <rect x="825" y="290" width="74" height="74" fill="#333" stroke="#000"/>
+  <text x="862" y="335" text-anchor="middle" fill="#fff" font-weight="600" font-size="12">SERVO</text>
+
+  <!-- Servo horn rotated CW (attach point lower, to the right) -->
+  <circle cx="862" cy="290" r="5" fill="#888" stroke="#000"/>
+  <line x1="862" y1="290" x2="872" y2="320" stroke="#000" stroke-width="4"/>
+  <circle cx="872" cy="320" r="4" fill="#d33"/>
+
+  <!-- Push-rod from horn (lower) up to beam right end (lower than before) -->
+  <!-- Beam right end after +12 rotation: x = 614 + 290*cos(12) = 614 + 283.5 = 897.5; y = 240 + 290*sin(12) = 240 + 60.3 = 300 -->
+  <!-- Use beam attach point at x=872, y=290 (approx) -->
+  <line x1="872" y1="320" x2="872" y2="290" stroke="#222" stroke-width="3"/>
+  <circle cx="872" cy="290" r="4" fill="#d33"/>
+
+  <!-- Direction arrows -->
+  <path d="M 862 285 A 18 18 0 0 0 866 268" class="arrow"/>
+  <text x="868" y="266" class="note" fill="#d33">rotate CW</text>
+
+  <text x="880" y="312" class="note" fill="#d33">rod down ↓</text>
+
+  <text x="870" y="262" text-anchor="middle" class="note" fill="#d33">ball rolls → downhill</text>
+
+  <!-- Pivot label -->
+  <text x="555" y="225" class="note">pivot</text>
+  <line x1="575" y1="228" x2="604" y2="238" class="arrow" style="marker-end:none;stroke:#777;stroke-width:1"/>
+
+  <!-- Bottom takeaway -->
+  <text x="490" y="430" text-anchor="middle" class="lbl">Small servo rotation ⇒ small rod travel ⇒ beam tilt about its own pivot. Servo never carries the beam's weight.</text>
+</svg>

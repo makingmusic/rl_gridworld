@@ -1,0 +1,69 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 320" font-family="-apple-system, system-ui, sans-serif" font-size="13">
+  <style>
+    .box   { fill: #fff; stroke: #000; stroke-width: 1.5; }
+    .plant { fill: #fef5e6; stroke: #000; stroke-width: 1.5; }
+    .ctl   { fill: #e6f0ff; stroke: #000; stroke-width: 1.5; }
+    .sens  { fill: #e8f5e8; stroke: #000; stroke-width: 1.5; }
+    .actu  { fill: #fde6e6; stroke: #000; stroke-width: 1.5; }
+    .lbl   { fill: #222; font-size: 13px; }
+    .note  { fill: #555; font-style: italic; font-size: 11px; }
+    .arrow { stroke: #000; stroke-width: 2; fill: none; marker-end: url(#a); }
+  </style>
+  <defs>
+    <marker id="a" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto">
+      <polygon points="0,0 9,3 0,6" fill="#000"/>
+    </marker>
+  </defs>
+
+  <text x="450" y="28" text-anchor="middle" font-size="15" font-weight="600" class="lbl">Control loop — what runs every 10 ms</text>
+
+  <!-- Setpoint -->
+  <text x="40" y="135" class="lbl">target</text>
+  <text x="40" y="151" class="note">(125 mm)</text>
+  <line x1="90" y1="140" x2="138" y2="140" class="arrow"/>
+
+  <!-- Summing junction -->
+  <circle cx="155" cy="140" r="17" class="box"/>
+  <text x="155" y="145" text-anchor="middle" class="lbl">−</text>
+  <text x="155" y="180" text-anchor="middle" class="note">error</text>
+
+  <!-- PID box -->
+  <rect x="200" y="115" width="130" height="50" class="ctl"/>
+  <text x="265" y="140" text-anchor="middle" font-weight="600" class="lbl">PID</text>
+  <text x="265" y="158" text-anchor="middle" class="note">Kp · e + Ki · ∫e + Kd · de/dt</text>
+  <line x1="172" y1="140" x2="198" y2="140" class="arrow"/>
+
+  <!-- output -->
+  <text x="345" y="132" class="note">tilt deg</text>
+
+  <!-- angle → PWM -->
+  <rect x="350" y="115" width="130" height="50" class="ctl"/>
+  <text x="415" y="140" text-anchor="middle" font-weight="600" class="lbl">angle → pulse µs</text>
+  <text x="415" y="158" text-anchor="middle" class="note">500 + (deg/180)·2000</text>
+  <line x1="330" y1="140" x2="348" y2="140" class="arrow"/>
+
+  <!-- Servo -->
+  <rect x="500" y="115" width="120" height="50" class="actu"/>
+  <text x="560" y="140" text-anchor="middle" font-weight="600" class="lbl">SG90 servo</text>
+  <text x="560" y="158" text-anchor="middle" class="note">tilts beam</text>
+  <line x1="480" y1="140" x2="498" y2="140" class="arrow"/>
+
+  <!-- Plant -->
+  <rect x="640" y="115" width="160" height="50" class="plant"/>
+  <text x="720" y="140" text-anchor="middle" font-weight="600" class="lbl">beam + ball + gravity</text>
+  <text x="720" y="158" text-anchor="middle" class="note">(physics, in the real world)</text>
+  <line x1="620" y1="140" x2="638" y2="140" class="arrow"/>
+
+  <!-- Sensor -->
+  <rect x="640" y="220" width="160" height="50" class="sens"/>
+  <text x="720" y="245" text-anchor="middle" font-weight="600" class="lbl">VL53L0X sensor</text>
+  <text x="720" y="263" text-anchor="middle" class="note">reports ball distance (mm)</text>
+
+  <!-- Feedback loop -->
+  <line x1="720" y1="165" x2="720" y2="218" class="arrow"/>
+  <line x1="640" y1="245" x2="155" y2="245" class="arrow"/>
+  <line x1="155" y1="245" x2="155" y2="159" class="arrow"/>
+
+  <!-- Loop period -->
+  <text x="450" y="295" text-anchor="middle" class="note">All five steps happen every tick. At 100 Hz that's once every 10 ms — forever.</text>
+</svg>
